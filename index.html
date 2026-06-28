@@ -8,8 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<!-- Google API client -->
-<script src="https://apis.google.com/js/api.js" async defer></script>
 <style>
   :root {
     --bg:          #0F1117;
@@ -448,53 +446,34 @@ const SCOPES      = 'https://www.googleapis.com/auth/calendar.readonly';
 const TODAY       = new Date().toISOString().slice(0, 10);
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let currentUser   = null;   // { name, email, picture, color, accessToken }
+let currentUser   = null;
 let EVENTS        = [];
 let TASKS         = JSON.parse(localStorage.getItem('lifesync-tasks') || '[]');
 let LINKS         = JSON.parse(localStorage.getItem('lifesync-links') || '[]');
 let calViewDate   = new Date();
-let tokenClient   = null;
 
-// Known users — maps email → profile colour slot
-// The first person to sign in gets p1, second gets p2
+// Known users — maps email → colour slot (p1 or p2)
 let knownUsers    = JSON.parse(localStorage.getItem('lifesync-users') || '{}');
 
-// ── GOOGLE SIGN-IN ────────────────────────────────────────────────────────────
-window.addEventListener('load', () => {
-  google.accounts.id.initialize({
-    client_id: CLIENT_ID,
-    callback: handleCredential,
-    auto_select: false,
-  });
-});
-
 function signIn() {
-  google.accounts.id.prompt((notification) => {
-    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-      // Fallback: show One Tap explicitly or use a redirect
-      google.accounts.id.renderButton(
-        document.createElement('div'),
-        { theme: 'outline', size: 'large' }
-      );
-      // Try popup flow
-      const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
-        `client_id=${CLIENT_ID}` +
-        `&redirect_uri=${encodeURIComponent(location.origin + location.pathname)}` +
-        `&response_type=token` +
-        `&scope=${encodeURIComponent('openid email profile ' + SCOPES)}` +
-        `&prompt=select_account`;
-      window.location.href = url;
-    }
-  });
+  // Single OAuth redirect requesting profile + calendar in one go
+  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+    'client_id=' + CLIENT_ID +
+    '&redirect_uri=' + encodeURIComponent(location.origin + location.pathname) +
+    '&response_type=token' +
+    '&scope=' + encodeURIComponent('openid email profile ' + SCOPES) +
+    '&prompt=select_account';
+  window.location.href = url;
 }
 
-// Handle OAuth implicit flow redirect (access_token in hash)
+// On page load — check if we're returning from an OAuth redirect
 (function handleRedirect() {
   const hash = window.location.hash;
   if (!hash.includes('access_token')) return;
   const params = new URLSearchParams(hash.slice(1));
   const accessToken = params.get('access_token');
   if (!accessToken) return;
+  // Clean the URL
   history.replaceState(null, '', window.location.pathname);
   fetchUserInfo(accessToken);
 })();
@@ -502,40 +481,18 @@ function signIn() {
 async function fetchUserInfo(accessToken) {
   try {
     const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${accessToken}` }
+      headers: { Authorization: 'Bearer ' + accessToken }
     });
     const info = await r.json();
+    if (!info.email) throw new Error('No email returned');
     onSignedIn({ name: info.name, email: info.email, picture: info.picture, accessToken });
   } catch(e) {
-    showSigninError('Could not fetch user info. Please try again.');
+    showSigninError('Sign-in failed: ' + e.message + '. Please try again.');
   }
 }
 
-function handleCredential(response) {
-  // Decode JWT id_token
-  const payload = JSON.parse(atob(response.credential.split('.')[1]));
-  // id_token doesn't give us calendar access — we need an access token too
-  // Store basic info and then request calendar scope
-  onSignedIn({ name: payload.name, email: payload.email, picture: payload.picture, accessToken: null });
-  requestCalendarAccess();
-}
-
-function requestCalendarAccess() {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: (tokenResponse) => {
-      if (tokenResponse.access_token) {
-        currentUser.accessToken = tokenResponse.access_token;
-        loadCalendarEvents();
-      }
-    },
-  });
-  tokenClient.requestAccessToken({ prompt: '' });
-}
-
 function onSignedIn(user) {
-  // Assign colour slot
+  // Assign colour slot — first person = p1, second = p2
   if (!knownUsers[user.email]) {
     const slot = Object.keys(knownUsers).length === 0 ? 'p1' : 'p2';
     knownUsers[user.email] = slot;
@@ -544,16 +501,14 @@ function onSignedIn(user) {
   user.slot = knownUsers[user.email];
   currentUser = user;
 
-  // Show app
   document.getElementById('signin-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
   initApp();
-  if (user.accessToken) loadCalendarEvents();
+  loadCalendarEvents();
 }
 
 function signOut() {
-  google.accounts.id.disableAutoSelect();
   currentUser = null;
   EVENTS = [];
   document.getElementById('app').style.display = 'none';
