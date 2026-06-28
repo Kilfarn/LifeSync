@@ -6,6 +6,10 @@
 <title>LifeSync — Home Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Google API client -->
+<script src="https://apis.google.com/js/api.js" async defer></script>
 <style>
   :root {
     --bg:          #0F1117;
@@ -13,10 +17,10 @@
     --border:      #2A2E40;
     --accent:      #7C9EFF;
     --accent-soft: #1E2A4A;
-    --alex:        #6C8EBF;
-    --alex-soft:   #1A2535;
-    --sam:         #D6A84E;
-    --sam-soft:    #2C2010;
+    --p1:          #6C8EBF;
+    --p1-soft:     #1A2535;
+    --p2:          #D6A84E;
+    --p2-soft:     #2C2010;
     --shared:      #82B366;
     --shared-soft: #162210;
     --text:        #E8EAF0;
@@ -34,11 +38,60 @@
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-  /* ── Layout ── */
+  /* ── Sign-in screen ── */
+  .signin-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    padding: 40px 20px;
+  }
+  .signin-logo { font-size: 36px; font-weight: 700; letter-spacing: -1px; }
+  .signin-logo span { color: var(--accent); }
+  .signin-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px 40px;
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    text-align: center;
+  }
+  .signin-title { font-size: 20px; font-weight: 700; }
+  .signin-sub   { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .signin-features { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; }
+  .signin-feature { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .signin-feature span:first-child { font-size: 16px; }
+  .google-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    color: #3c4043;
+    border: 1px solid #dadce0;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    justify-content: center;
+    transition: box-shadow 0.15s;
+  }
+  .google-btn:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .google-logo { width: 18px; height: 18px; }
+
+  /* ── Header ── */
   .header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 16px 28px;
+    padding: 14px 28px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -48,9 +101,42 @@
   }
   .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
   .logo span { color: var(--accent); }
-  .header-right { display: flex; align-items: center; gap: 8px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
   .greeting { color: var(--muted); font-size: 14px; }
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px 5px 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .user-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .user-avatar-placeholder {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #0F1117;
+  }
+  .signout-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .signout-btn:hover { border-color: var(--danger); color: var(--danger); }
 
+  /* ── Layout ── */
   .grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -74,71 +160,44 @@
     gap: 14px;
   }
   .card-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
     color: var(--muted);
   }
   .row { display: flex; align-items: center; gap: 10px; }
   .sb  { display: flex; align-items: center; justify-content: space-between; }
 
   /* ── Pills ── */
-  .pill {
-    border-radius: 20px;
-    padding: 3px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    border: 1px solid;
-  }
-  .pill-alex   { background: var(--alex-soft);   color: var(--alex);   border-color: #6C8EBF44; }
-  .pill-sam    { background: var(--sam-soft);    color: var(--sam);    border-color: #D6A84E44; }
+  .pill { border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 600; border: 1px solid; }
+  .pill-p1     { background: var(--p1-soft);     color: var(--p1);     border-color: #6C8EBF44; }
+  .pill-p2     { background: var(--p2-soft);     color: var(--p2);     border-color: #D6A84E44; }
   .pill-shared { background: var(--shared-soft); color: var(--shared); border-color: #82B36644; }
   .pill-accent { background: var(--accent-soft); color: var(--accent); border-color: #7C9EFF44; }
 
   /* ── Buttons ── */
   .btn-accent {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--accent-soft);
-    color: var(--accent);
-    border: 1px solid #7C9EFF44;
-    border-radius: 8px;
-    padding: 6px 13px;
-    font-size: 12px;
-    font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-soft); color: var(--accent);
+    border: 1px solid #7C9EFF44; border-radius: 8px;
+    padding: 6px 13px; font-size: 12px; font-weight: 600;
   }
   .btn-accent:hover { filter: brightness(1.15); }
   .btn-ghost {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-size: 11px;
+    background: none; border: 1px solid var(--border);
+    color: var(--muted); border-radius: 6px; padding: 4px 10px; font-size: 11px;
   }
   .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
   .btn-add {
-    background: var(--accent);
-    color: #0F1117;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 14px;
-    font-size: 13px;
-    font-weight: 700;
+    background: var(--accent); color: #0F1117;
+    border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700;
   }
   .btn-add:hover { filter: brightness(1.1); }
 
   /* ── Inputs ── */
   .input {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    padding: 8px 12px;
-    font-size: 13px;
-    outline: none;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    padding: 8px 12px; font-size: 13px; outline: none;
     transition: border-color 0.15s;
   }
   .input:focus { border-color: var(--accent); }
@@ -149,71 +208,40 @@
   .weather-temp { font-size: 30px; font-weight: 700; letter-spacing: -1px; margin-top: 4px; }
 
   /* ── Events ── */
-  .event-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
-    border-radius: 10px;
-    border: 1px solid transparent;
-  }
-  .event-alex   { background: var(--alex-soft);   border-color: #6C8EBF33; }
-  .event-sam    { background: var(--sam-soft);    border-color: #D6A84E33; }
+  .event-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; border: 1px solid transparent; }
+  .event-p1     { background: var(--p1-soft);     border-color: #6C8EBF33; }
+  .event-p2     { background: var(--p2-soft);     border-color: #D6A84E33; }
   .event-shared { background: var(--shared-soft); border-color: #82B36633; }
   .event-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .dot-alex   { background: var(--alex); }
-  .dot-sam    { background: var(--sam); }
-  .dot-shared { background: var(--shared); }
   .event-title { font-size: 14px; font-weight: 500; }
   .event-sub   { font-size: 11px; color: var(--muted); margin-top: 1px; }
   .event-when  { font-size: 11px; color: var(--muted); white-space: nowrap; }
 
   /* ── Full month calendar ── */
-  .month-cal { display: flex; flex-direction: column; gap: 4px; }
   .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
   .month-nav-btn {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 8px;
-    width: 30px; height: 30px;
-    font-size: 14px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; width: 30px; height: 30px; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
   .month-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
   .month-title { font-size: 14px; font-weight: 700; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
   .cal-hdr  { text-align: center; font-size: 10px; color: var(--muted); font-weight: 700; padding: 4px 0; }
   .cal-day  {
-    text-align: center;
-    padding: 6px 2px 4px;
-    border-radius: 8px;
-    border: 1px solid transparent;
-    font-size: 12px;
-    min-height: 46px;
-    cursor: default;
-    transition: border-color 0.1s;
+    text-align: center; padding: 6px 2px 4px; border-radius: 8px;
+    border: 1px solid transparent; font-size: 12px; min-height: 46px; cursor: default;
   }
-  .cal-day:not(.cal-empty):hover { border-color: var(--border); }
   .cal-day.today { background: var(--accent); color: #0F1117; font-weight: 700; }
   .cal-day.other-month { opacity: 0.3; }
   .cal-day.has-events { border-color: var(--border); }
   .cal-day-num { font-size: 12px; font-weight: 500; line-height: 1; }
   .cal-dots { display: flex; justify-content: center; gap: 2px; margin-top: 4px; flex-wrap: wrap; }
   .cal-dot  { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-  .cal-empty { border: none; }
 
   /* ── Stats ── */
   .stat-row { display: flex; gap: 8px; }
-  .stat-box {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 10px;
-    flex: 1;
-    text-align: center;
-  }
+  .stat-box { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; flex: 1; text-align: center; }
   .stat-num   { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
   .stat-label { font-size: 10px; color: var(--muted); margin-top: 3px; }
   .stat-wide  { flex: 2; text-align: left; }
@@ -221,15 +249,7 @@
   .stat-wide .stat-num   { font-size: 14px; font-weight: 600; margin-top: 3px; }
 
   /* ── Bins ── */
-  .bin-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--bg);
-  }
+  .bin-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); }
   .bin-item.urgent { border-color: var(--danger); background: #2C1010; }
   .bin-icon  { font-size: 22px; }
   .bin-name  { font-size: 14px; font-weight: 600; }
@@ -251,241 +271,407 @@
   .tag-low    { background: #7B7F9422; color: var(--muted);  border-color: #7B7F9444; }
   .task-add-row { display: flex; gap: 6px; }
 
-  /* ── Links grid ── */
+  /* ── Links ── */
   .links-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .link-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text);
-    transition: border-color 0.15s;
-  }
+  .link-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; font-size: 13px; font-weight: 500; color: var(--text); transition: border-color 0.15s; }
   .link-item:hover { border-color: var(--accent); color: var(--accent); }
   .link-icon { font-size: 16px; }
 
-  /* ── Tip box ── */
-  .tip-box {
-    background: var(--accent-soft);
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 12px;
-    color: var(--accent);
-    line-height: 1.6;
-  }
+  /* ── Misc ── */
+  .tip-box { background: var(--accent-soft); border-radius: 10px; padding: 10px 14px; font-size: 12px; color: var(--accent); line-height: 1.6; }
   .tip-box.muted { background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
-
-  /* ── Notes ── */
-  .notes-ta {
-    width: 100%;
-    height: 130px;
-    resize: vertical;
-    line-height: 1.6;
-  }
-
-  /* ── Divider ── */
-  .divider { height: 1px; background: var(--border); margin: 6px 0; }
-
-  /* ── Footer ── */
-  .footer { text-align: center; padding: 20px 0 32px; color: var(--muted); font-size: 12px; }
-
-  /* ── Connect banner ── */
-  .connect-banner {
-    background: var(--accent-soft);
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 12px;
-    color: var(--accent);
-    line-height: 1.6;
-  }
-  .connect-banner strong { color: var(--text); }
+  .notes-ta { width: 100%; height: 130px; resize: vertical; line-height: 1.6; }
+  .divider  { height: 1px; background: var(--border); margin: 6px 0; }
+  .footer   { text-align: center; padding: 20px 0 32px; color: var(--muted); font-size: 12px; }
+  .empty-state { text-align: center; padding: 20px 0; color: var(--muted); font-size: 13px; }
   .connected-badge { font-size: 11px; color: var(--good); }
+  .spinning { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .cal-syncing { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 </style>
 </head>
 <body>
 
-<!-- ── HEADER ─────────────────────────────────────────── -->
-<header class="header">
-  <div class="row">
-    <div class="logo">life<span>sync</span></div>
-    <div class="greeting" id="greeting"></div>
+<!-- ── SIGN-IN SCREEN ──────────────────────────────────── -->
+<div id="signin-screen" class="signin-screen">
+  <div class="signin-logo">life<span>sync</span></div>
+  <div class="signin-card">
+    <div class="signin-title">Welcome home 🏠</div>
+    <div class="signin-sub">Sign in with Google to access your shared household dashboard.</div>
+    <div class="signin-features">
+      <div class="signin-feature"><span>📅</span><span>Your Google Calendar, synced automatically</span></div>
+      <div class="signin-feature"><span>👫</span><span>Shared tasks and notes with your partner</span></div>
+      <div class="signin-feature"><span>🗑️</span><span>Bin day reminders, fitness tracking & more</span></div>
+    </div>
+    <button class="google-btn" onclick="signIn()">
+      <svg class="google-logo" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+        <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.962L3.964 6.294C4.672 4.169 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <div id="signin-error" style="font-size:12px;color:var(--danger);display:none;"></div>
   </div>
-  <div class="header-right">
-    <span class="pill pill-alex">Alex</span>
-    <span class="pill pill-sam">Sam</span>
-    <span class="pill pill-shared">Shared</span>
-  </div>
-</header>
-
-<!-- ── GRID ───────────────────────────────────────────── -->
-<div class="grid">
-
-  <!-- Weather -->
-  <div class="card" style="flex-direction:row;align-items:center;gap:20px;">
-    <div class="weather-icon">⛅</div>
-    <div style="flex:1">
-      <div class="card-title">Weather · London</div>
-      <div class="weather-temp">18°C</div>
-      <div style="color:var(--muted);font-size:13px;">Partly cloudy</div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-size:12px;color:var(--muted);">H: 21° / L: 13°</div>
-      <div id="date-display" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
-    </div>
-  </div>
-
-  <!-- Full Month Calendar -->
-  <div class="card">
-    <div class="month-nav">
-      <button class="month-nav-btn" onclick="changeMonth(-1)">‹</button>
-      <div class="month-title" id="month-title"></div>
-      <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
-    </div>
-    <div class="cal-grid" id="month-cal">
-      <div class="cal-hdr">Mo</div><div class="cal-hdr">Tu</div><div class="cal-hdr">We</div>
-      <div class="cal-hdr">Th</div><div class="cal-hdr">Fr</div><div class="cal-hdr">Sa</div><div class="cal-hdr">Su</div>
-    </div>
-    <div class="row" style="padding-top:2px;">
-      <span class="pill pill-alex">Alex</span>
-      <span class="pill pill-sam">Sam</span>
-      <span class="pill pill-shared">Shared</span>
-    </div>
-  </div>
-
-  <!-- Tasks -->
-  <div class="card" style="grid-row:span 2;">
-    <div class="sb">
-      <div class="card-title">✅ Household Tasks</div>
-      <span id="task-count" style="font-size:12px;color:var(--muted);"></span>
-    </div>
-    <div class="task-add-row">
-      <input class="input input-flex" id="task-input" placeholder="Add a task…" />
-      <select class="input" id="task-priority" style="width:72px;">
-        <option value="high">High</option>
-        <option value="medium" selected>Med</option>
-        <option value="low">Low</option>
-      </select>
-      <button class="btn-add" onclick="addTask()">+</button>
-    </div>
-    <div id="task-list"></div>
-  </div>
-
-  <!-- Calendar -->
-  <div class="card col-span-2">
-    <div class="sb">
-      <div class="card-title">📅 Calendar</div>
-      <button class="btn-accent" id="cal-btn" onclick="toggleCalConnect()">Connect Google Cal</button>
-    </div>
-    <div id="cal-banner" class="connect-banner">
-      <strong>To connect your Google Calendar:</strong> Go to Google Cloud Console → Create a project → Enable the Calendar API → Add OAuth 2.0 credentials → paste your Client ID in Settings. Demo events shown below.
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px;" id="event-list"></div>
-    <div class="row">
-      <span class="pill pill-alex">Alex</span>
-      <span class="pill pill-sam">Sam</span>
-      <span class="pill pill-shared">Shared</span>
-    </div>
-  </div>
-
-  <!-- Fitness Alex -->
-  <div class="card" style="border-color:#6C8EBF44;">
-    <div class="sb">
-      <div class="card-title">🏃 Fitness · <span style="color:var(--alex);">Alex</span></div>
-      <button class="btn-accent" id="fitness-alex-btn" style="background:var(--alex-soft);color:var(--alex);border-color:#6C8EBF44;" onclick="toggleFitness('alex')">Connect App</button>
-    </div>
-    <div id="fitness-alex-body">
-      <div style="text-align:center;padding:20px 0;color:var(--muted);font-size:13px;">Connect your fitness app to see stats here.</div>
-    </div>
-    <div style="font-size:11px;color:var(--muted);" id="fitness-alex-apps">Supports: Strava · Garmin · Apple Health · Google Fit · Fitbit</div>
-  </div>
-
-  <!-- Fitness Sam -->
-  <div class="card" style="border-color:#D6A84E44;">
-    <div class="sb">
-      <div class="card-title">🏃 Fitness · <span style="color:var(--sam);">Sam</span></div>
-      <button class="btn-accent" id="fitness-sam-btn" style="background:var(--sam-soft);color:var(--sam);border-color:#D6A84E44;" onclick="toggleFitness('sam')">Connect App</button>
-    </div>
-    <div id="fitness-sam-body">
-      <div style="text-align:center;padding:20px 0;color:var(--muted);font-size:13px;">Connect your fitness app to see stats here.</div>
-    </div>
-    <div style="font-size:11px;color:var(--muted);" id="fitness-sam-apps">Supports: Strava · Garmin · Apple Health · Google Fit · Fitbit</div>
-  </div>
-
-  <!-- Bins -->
-  <div class="card">
-    <div class="sb">
-      <div class="card-title">🗑️ Bin Collections</div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px;" id="bin-list"></div>
-    <div class="tip-box muted">
-      💡 Collections every <strong style="color:var(--text);">Tuesday</strong> · rotating General Waste → Recycling → Garden Waste
-    </div>
-  </div>
-
-  <!-- Shared Notes -->
-  <div class="card">
-    <div class="card-title">📝 Shared Notes</div>
-    <textarea class="input notes-ta" id="notes-ta" placeholder="Jot down anything for both of you…"></textarea>
-    <div style="font-size:11px;color:var(--muted);">Auto-saved · visible to both</div>
-  </div>
-
-  <!-- Quick Links -->
-  <div class="card">
-    <div class="sb">
-      <div class="card-title">🔗 Quick Links</div>
-      <button class="btn-accent" onclick="toggleAddLink()">+ Add link</button>
-    </div>
-    <div id="add-link-form" style="display:none;flex-direction:column;gap:6px;">
-      <input class="input" id="link-label" placeholder="Label (e.g. Council Website)" />
-      <input class="input" id="link-url" placeholder="https://…" />
-      <button class="btn-add" style="align-self:flex-start;" onclick="addLink()">Save link</button>
-    </div>
-    <div class="links-grid" id="links-grid"></div>
-  </div>
-
 </div>
 
-<div class="footer">lifesync · built for you &amp; your partner</div>
+<!-- ── MAIN APP (hidden until signed in) ──────────────── -->
+<div id="app" style="display:none;">
+
+  <header class="header">
+    <div class="row">
+      <div class="logo">life<span>sync</span></div>
+      <div class="greeting" id="greeting"></div>
+    </div>
+    <div class="header-right">
+      <div id="user-badge" class="user-badge"></div>
+      <button class="signout-btn" onclick="signOut()">Sign out</button>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- Weather -->
+    <div class="card" style="flex-direction:row;align-items:center;gap:20px;">
+      <div id="weather-icon" class="weather-icon">⛅</div>
+      <div style="flex:1">
+        <div class="card-title" id="weather-location">Weather</div>
+        <div class="weather-temp" id="weather-temp">--°C</div>
+        <div style="color:var(--muted);font-size:13px;" id="weather-desc">Loading…</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;color:var(--muted);" id="weather-hilo"></div>
+        <div id="date-display" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <!-- Full Month Calendar -->
+    <div class="card">
+      <div class="month-nav">
+        <button class="month-nav-btn" onclick="changeMonth(-1)">‹</button>
+        <div class="month-title" id="month-title"></div>
+        <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
+      </div>
+      <div class="cal-grid" id="month-cal">
+        <div class="cal-hdr">Mo</div><div class="cal-hdr">Tu</div><div class="cal-hdr">We</div>
+        <div class="cal-hdr">Th</div><div class="cal-hdr">Fr</div><div class="cal-hdr">Sa</div><div class="cal-hdr">Su</div>
+      </div>
+      <div class="row" style="padding-top:2px;" id="cal-legend"></div>
+    </div>
+
+    <!-- Tasks -->
+    <div class="card" style="grid-row:span 2;">
+      <div class="sb">
+        <div class="card-title">✅ Household Tasks</div>
+        <span id="task-count" style="font-size:12px;color:var(--muted);"></span>
+      </div>
+      <div class="task-add-row">
+        <input class="input input-flex" id="task-input" placeholder="Add a task…" />
+        <select class="input" id="task-priority" style="width:72px;">
+          <option value="high">High</option>
+          <option value="medium" selected>Med</option>
+          <option value="low">Low</option>
+        </select>
+        <button class="btn-add" onclick="addTask()">+</button>
+      </div>
+      <div id="task-list"></div>
+    </div>
+
+    <!-- Calendar Events -->
+    <div class="card col-span-2">
+      <div class="sb">
+        <div class="card-title">📅 Upcoming Events</div>
+        <div id="cal-status" class="cal-syncing"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;" id="event-list"></div>
+    </div>
+
+    <!-- Fitness P1 -->
+    <div class="card" id="fitness-p1-card" style="border-color:#6C8EBF44;">
+      <div class="sb">
+        <div class="card-title" id="fitness-p1-title">🏃 Fitness</div>
+        <button class="btn-accent" id="fitness-p1-btn" style="background:var(--p1-soft);color:var(--p1);border-color:#6C8EBF44;" onclick="toggleFitness('p1')">Connect App</button>
+      </div>
+      <div id="fitness-p1-body"><div class="empty-state">Connect your fitness app to see stats here.</div></div>
+      <div style="font-size:11px;color:var(--muted);" id="fitness-p1-apps">Supports: Strava · Garmin · Apple Health · Google Fit · Fitbit</div>
+    </div>
+
+    <!-- Fitness P2 -->
+    <div class="card" id="fitness-p2-card" style="border-color:#D6A84E44;">
+      <div class="sb">
+        <div class="card-title" id="fitness-p2-title">🏃 Fitness</div>
+        <button class="btn-accent" id="fitness-p2-btn" style="background:var(--p2-soft);color:var(--p2);border-color:#D6A84E44;" onclick="toggleFitness('p2')">Connect App</button>
+      </div>
+      <div id="fitness-p2-body"><div class="empty-state">Connect your fitness app to see stats here.</div></div>
+      <div style="font-size:11px;color:var(--muted);" id="fitness-p2-apps">Supports: Strava · Garmin · Apple Health · Google Fit · Fitbit</div>
+    </div>
+
+    <!-- Bins -->
+    <div class="card">
+      <div class="card-title">🗑️ Bin Collections</div>
+      <div style="display:flex;flex-direction:column;gap:8px;" id="bin-list"></div>
+      <div class="tip-box muted">
+        💡 Collections every <strong style="color:var(--text);">Tuesday</strong> · rotating General Waste → Recycling → Garden Waste
+      </div>
+    </div>
+
+    <!-- Shared Notes -->
+    <div class="card">
+      <div class="card-title">📝 Shared Notes</div>
+      <textarea class="input notes-ta" id="notes-ta" placeholder="Jot down anything for both of you…"></textarea>
+      <div style="font-size:11px;color:var(--muted);">Saved in your browser</div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="card">
+      <div class="sb">
+        <div class="card-title">🔗 Quick Links</div>
+        <button class="btn-accent" onclick="toggleAddLink()">+ Add link</button>
+      </div>
+      <div id="add-link-form" style="display:none;flex-direction:column;gap:6px;">
+        <input class="input" id="link-label" placeholder="Label (e.g. Council Website)" />
+        <input class="input" id="link-url" placeholder="https://…" />
+        <button class="btn-add" style="align-self:flex-start;" onclick="addLink()">Save link</button>
+      </div>
+      <div class="links-grid" id="links-grid"></div>
+    </div>
+
+  </div>
+  <div class="footer">lifesync · your home, in sync</div>
+</div>
 
 <script>
-// ── DATA ──────────────────────────────────────────────────────────────────────
-const TODAY = new Date().toISOString().slice(0, 10);
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const CLIENT_ID   = '149756037546-g9526tagfjpem4dc0cmqlnkiksvffdli.apps.googleusercontent.com';
+const SCOPES      = 'https://www.googleapis.com/auth/calendar.readonly';
+const TODAY       = new Date().toISOString().slice(0, 10);
 
-const EVENTS = [];
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let currentUser   = null;   // { name, email, picture, color, accessToken }
+let EVENTS        = [];
+let TASKS         = JSON.parse(localStorage.getItem('lifesync-tasks') || '[]');
+let LINKS         = JSON.parse(localStorage.getItem('lifesync-links') || '[]');
+let calViewDate   = new Date();
+let tokenClient   = null;
 
-let TASKS = [];
+// Known users — maps email → profile colour slot
+// The first person to sign in gets p1, second gets p2
+let knownUsers    = JSON.parse(localStorage.getItem('lifesync-users') || '{}');
 
-let LINKS = [];
+// ── GOOGLE SIGN-IN ────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: handleCredential,
+    auto_select: false,
+  });
+});
 
-// ── HELPERS ───────────────────────────────────────────────────────────────────
-function daysUntil(ds) {
-  const t = new Date(TODAY), d = new Date(ds);
-  return Math.ceil((d - t) / 86400000);
+function signIn() {
+  google.accounts.id.prompt((notification) => {
+    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+      // Fallback: show One Tap explicitly or use a redirect
+      google.accounts.id.renderButton(
+        document.createElement('div'),
+        { theme: 'outline', size: 'large' }
+      );
+      // Try popup flow
+      const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${CLIENT_ID}` +
+        `&redirect_uri=${encodeURIComponent(location.origin + location.pathname)}` +
+        `&response_type=token` +
+        `&scope=${encodeURIComponent('openid email profile ' + SCOPES)}` +
+        `&prompt=select_account`;
+      window.location.href = url;
+    }
+  });
 }
-function fmtDate(ds) {
-  return new Date(ds).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-}
 
-// ── GREETING & DATE ───────────────────────────────────────────────────────────
-(function() {
-  const h = new Date().getHours();
-  document.getElementById('greeting').textContent =
-    '— ' + (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + ' 👋';
-  document.getElementById('date-display').textContent =
-    new Date().toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+// Handle OAuth implicit flow redirect (access_token in hash)
+(function handleRedirect() {
+  const hash = window.location.hash;
+  if (!hash.includes('access_token')) return;
+  const params = new URLSearchParams(hash.slice(1));
+  const accessToken = params.get('access_token');
+  if (!accessToken) return;
+  history.replaceState(null, '', window.location.pathname);
+  fetchUserInfo(accessToken);
 })();
 
-// ── FULL MONTH CALENDAR ───────────────────────────────────────────────────────
-let calViewDate = new Date(TODAY);
+async function fetchUserInfo(accessToken) {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const info = await r.json();
+    onSignedIn({ name: info.name, email: info.email, picture: info.picture, accessToken });
+  } catch(e) {
+    showSigninError('Could not fetch user info. Please try again.');
+  }
+}
 
+function handleCredential(response) {
+  // Decode JWT id_token
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  // id_token doesn't give us calendar access — we need an access token too
+  // Store basic info and then request calendar scope
+  onSignedIn({ name: payload.name, email: payload.email, picture: payload.picture, accessToken: null });
+  requestCalendarAccess();
+}
+
+function requestCalendarAccess() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (tokenResponse) => {
+      if (tokenResponse.access_token) {
+        currentUser.accessToken = tokenResponse.access_token;
+        loadCalendarEvents();
+      }
+    },
+  });
+  tokenClient.requestAccessToken({ prompt: '' });
+}
+
+function onSignedIn(user) {
+  // Assign colour slot
+  if (!knownUsers[user.email]) {
+    const slot = Object.keys(knownUsers).length === 0 ? 'p1' : 'p2';
+    knownUsers[user.email] = slot;
+    localStorage.setItem('lifesync-users', JSON.stringify(knownUsers));
+  }
+  user.slot = knownUsers[user.email];
+  currentUser = user;
+
+  // Show app
+  document.getElementById('signin-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  initApp();
+  if (user.accessToken) loadCalendarEvents();
+}
+
+function signOut() {
+  google.accounts.id.disableAutoSelect();
+  currentUser = null;
+  EVENTS = [];
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('signin-screen').style.display = 'flex';
+}
+
+function showSigninError(msg) {
+  const el = document.getElementById('signin-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ── INIT APP ──────────────────────────────────────────────────────────────────
+function initApp() {
+  // Greeting
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('greeting').textContent = `— ${greet} 👋`;
+  document.getElementById('date-display').textContent =
+    new Date().toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+
+  // User badge
+  const slot  = currentUser.slot;
+  const color = slot === 'p1' ? 'var(--p1)' : 'var(--p2)';
+  const badge = document.getElementById('user-badge');
+  const initial = currentUser.name.charAt(0).toUpperCase();
+  badge.innerHTML = currentUser.picture
+    ? `<img class="user-avatar" src="${currentUser.picture}" referrerpolicy="no-referrer" /> ${currentUser.name.split(' ')[0]}`
+    : `<div class="user-avatar-placeholder" style="background:${color}">${initial}</div> ${currentUser.name.split(' ')[0]}`;
+
+  // Fitness card titles
+  document.getElementById('fitness-p1-title').innerHTML = `🏃 Fitness · <span style="color:var(--p1);">${currentUser.slot === 'p1' ? currentUser.name.split(' ')[0] : 'Partner 1'}</span>`;
+  document.getElementById('fitness-p2-title').innerHTML = `🏃 Fitness · <span style="color:var(--p2);">${currentUser.slot === 'p2' ? currentUser.name.split(' ')[0] : 'Partner 2'}</span>`;
+
+  // Calendar legend
+  const legend = document.getElementById('cal-legend');
+  legend.innerHTML = `
+    <span class="pill pill-p1">${currentUser.slot === 'p1' ? currentUser.name.split(' ')[0] : 'Partner 1'}</span>
+    <span class="pill pill-p2">${currentUser.slot === 'p2' ? currentUser.name.split(' ')[0] : 'Partner 2'}</span>
+    <span class="pill pill-shared">Shared</span>`;
+
+  renderMonthCal();
+  renderEvents();
+  renderBins();
+  renderTasks();
+  renderLinks();
+  loadWeather();
+
+  // Notes
+  const ta = document.getElementById('notes-ta');
+  const saved = localStorage.getItem('lifesync-notes');
+  if (saved) ta.value = saved;
+  ta.addEventListener('input', () => localStorage.setItem('lifesync-notes', ta.value));
+
+  document.getElementById('task-input').addEventListener('keydown', e => { if(e.key==='Enter') addTask(); });
+}
+
+// ── GOOGLE CALENDAR ───────────────────────────────────────────────────────────
+async function loadCalendarEvents() {
+  if (!currentUser?.accessToken) return;
+  const status = document.getElementById('cal-status');
+  status.innerHTML = `<span class="spinning">↻</span> Syncing…`;
+
+  try {
+    const now    = new Date().toISOString();
+    const future = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const url    = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
+      `timeMin=${encodeURIComponent(now)}&timeMax=${encodeURIComponent(future)}` +
+      `&singleEvents=true&orderBy=startTime&maxResults=20`;
+
+    const r    = await fetch(url, { headers: { Authorization: `Bearer ${currentUser.accessToken}` } });
+    const data = await r.json();
+
+    if (data.error) throw new Error(data.error.message);
+
+    EVENTS = (data.items || []).map(item => ({
+      id:    item.id,
+      title: item.summary || '(No title)',
+      date:  (item.start.dateTime || item.start.date).slice(0, 10),
+      time:  item.start.dateTime ? new Date(item.start.dateTime).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) : 'All day',
+      cal:   currentUser.slot,
+    }));
+
+    status.innerHTML = `<span style="color:var(--good)">✓ Synced</span>`;
+    renderEvents();
+    renderMonthCal();
+
+  } catch(e) {
+    status.innerHTML = `<span style="color:var(--danger)">⚠ ${e.message}</span>`;
+  }
+}
+
+// ── WEATHER (Open-Meteo, no API key needed) ───────────────────────────────────
+async function loadWeather() {
+  try {
+    // Default to London coords; could use navigator.geolocation for real location
+    const lat = 51.5, lon = -0.12;
+    const r = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,weathercode&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
+    );
+    const d = await r.json();
+    const code  = d.current.weathercode;
+    const icons = { 0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️', 45:'🌫️', 48:'🌫️', 51:'🌦️', 53:'🌦️', 55:'🌧️', 61:'🌧️', 63:'🌧️', 65:'🌧️', 71:'❄️', 73:'❄️', 75:'❄️', 80:'🌦️', 81:'🌧️', 82:'⛈️', 95:'⛈️' };
+    const descs = { 0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast', 45:'Foggy', 51:'Light drizzle', 61:'Light rain', 63:'Moderate rain', 65:'Heavy rain', 71:'Light snow', 80:'Rain showers', 95:'Thunderstorm' };
+    document.getElementById('weather-icon').textContent = icons[code] || '🌡️';
+    document.getElementById('weather-temp').textContent = Math.round(d.current.temperature_2m) + '°C';
+    document.getElementById('weather-desc').textContent = descs[code] || 'Mixed conditions';
+    document.getElementById('weather-hilo').textContent = `H: ${Math.round(d.daily.temperature_2m_max[0])}° / L: ${Math.round(d.daily.temperature_2m_min[0])}°`;
+    document.getElementById('weather-location').textContent = 'Weather · London';
+  } catch(e) {
+    document.getElementById('weather-desc').textContent = 'Unable to load';
+  }
+}
+
+// ── CALENDAR RENDER ───────────────────────────────────────────────────────────
 function renderMonthCal() {
   const grid = document.getElementById('month-cal');
-  // Remove all day cells (keep the 7 header divs)
   const headers = Array.from(grid.children).slice(0, 7);
   grid.innerHTML = '';
   headers.forEach(h => grid.appendChild(h));
@@ -493,15 +679,13 @@ function renderMonthCal() {
   const year  = calViewDate.getFullYear();
   const month = calViewDate.getMonth();
   document.getElementById('month-title').textContent =
-    new Date(year, month, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    new Date(year, month, 1).toLocaleDateString('en-GB', { month:'long', year:'numeric' });
 
-  // First day of month (Mon=0 ... Sun=6)
-  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-  const offset = (firstDay === 0) ? 6 : firstDay - 1; // convert to Mon-start
+  const firstDay  = new Date(year, month, 1).getDay();
+  const offset    = (firstDay === 0) ? 6 : firstDay - 1;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const daysInPrev  = new Date(year, month, 0).getDate();
 
-  // Previous month padding
   for (let i = offset - 1; i >= 0; i--) {
     const d = document.createElement('div');
     d.className = 'cal-day other-month';
@@ -509,25 +693,24 @@ function renderMonthCal() {
     grid.appendChild(d);
   }
 
-  // Current month days
   for (let day = 1; day <= daysInMonth; day++) {
     const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const dayEvs = EVENTS.filter(e => e.date === ds);
+    const dayEvs  = EVENTS.filter(e => e.date === ds);
     const isToday = ds === TODAY;
     const d = document.createElement('div');
     d.className = 'cal-day' + (isToday ? ' today' : '') + (dayEvs.length ? ' has-events' : '');
     let dotsHTML = '';
     if (dayEvs.length) {
       dotsHTML = '<div class="cal-dots">' +
-        dayEvs.slice(0,3).map(ev =>
-          `<div class="cal-dot" style="background:${ev.cal==='alex'?'var(--alex)':ev.cal==='sam'?'var(--sam)':'var(--shared)'}"></div>`
-        ).join('') + '</div>';
+        dayEvs.slice(0,3).map(ev => {
+          const col = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
+          return `<div class="cal-dot" style="background:${col}"></div>`;
+        }).join('') + '</div>';
     }
     d.innerHTML = `<div class="cal-day-num">${day}</div>${dotsHTML}`;
     grid.appendChild(d);
   }
 
-  // Next month padding to complete the grid
   const total = offset + daysInMonth;
   const remainder = total % 7 === 0 ? 0 : 7 - (total % 7);
   for (let i = 1; i <= remainder; i++) {
@@ -542,24 +725,25 @@ function changeMonth(dir) {
   calViewDate.setMonth(calViewDate.getMonth() + dir);
   renderMonthCal();
 }
-renderMonthCal();
 
-// ── EVENTS ────────────────────────────────────────────────────────────────────
+// ── EVENTS LIST ───────────────────────────────────────────────────────────────
 function renderEvents() {
   const list = document.getElementById('event-list');
   list.innerHTML = '';
   const upcoming = EVENTS.filter(e => e.date >= TODAY)
-    .sort((a,b) => a.date.localeCompare(b.date)).slice(0,6);
+    .sort((a,b) => a.date.localeCompare(b.date)).slice(0, 8);
   if (!upcoming.length) {
-    list.innerHTML = `<div style="text-align:center;padding:20px 0;color:var(--muted);font-size:13px;">No events yet — connect your Google Calendar to see them here.</div>`;
+    list.innerHTML = `<div class="empty-state">No upcoming events — your calendar will appear here once synced.</div>`;
     return;
   }
   upcoming.forEach(ev => {
     const d = daysUntil(ev.date);
+    const col   = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
+    const bgCls = ev.cal === 'p1' ? 'event-p1' : ev.cal === 'p2' ? 'event-p2' : 'event-shared';
     const div = document.createElement('div');
-    div.className = `event-item event-${ev.cal}`;
+    div.className = `event-item ${bgCls}`;
     div.innerHTML = `
-      <div class="event-dot dot-${ev.cal}"></div>
+      <div class="event-dot" style="background:${col}"></div>
       <div style="flex:1">
         <div class="event-title">${ev.title}</div>
         <div class="event-sub">${fmtDate(ev.date)} · ${ev.time}</div>
@@ -568,21 +752,11 @@ function renderEvents() {
     list.appendChild(div);
   });
 }
-renderEvents();
-
-let calConnected = false;
-function toggleCalConnect() {
-  calConnected = !calConnected;
-  document.getElementById('cal-banner').style.display = calConnected ? 'none' : '';
-  document.getElementById('cal-btn').textContent = calConnected ? '' : 'Connect Google Cal';
-  document.getElementById('cal-btn').className = calConnected ? 'connected-badge' : 'btn-accent';
-  if (calConnected) document.getElementById('cal-btn').textContent = '✓ Connected';
-}
 
 // ── FITNESS ───────────────────────────────────────────────────────────────────
-function toggleFitness(who) {
-  const btn  = document.getElementById(`fitness-${who}-btn`);
-  const apps = document.getElementById(`fitness-${who}-apps`);
+function toggleFitness(slot) {
+  const btn  = document.getElementById(`fitness-${slot}-btn`);
+  const apps = document.getElementById(`fitness-${slot}-apps`);
   if (btn.textContent.trim() === 'Connect App') {
     btn.textContent = '✓ Synced';
     btn.className = 'connected-badge';
@@ -590,97 +764,77 @@ function toggleFitness(who) {
   } else {
     btn.textContent = 'Connect App';
     btn.className = 'btn-accent';
-    btn.style = who==='alex'
-      ? 'background:var(--alex-soft);color:var(--alex);border-color:#6C8EBF44;'
-      : 'background:var(--sam-soft);color:var(--sam);border-color:#D6A84E44;';
     apps.textContent = 'Supports: Strava · Garmin · Apple Health · Google Fit · Fitbit';
   }
 }
 
 // ── BINS ──────────────────────────────────────────────────────────────────────
-// Rotation: General Waste → Recycling → Garden Waste, every Tuesday
-// Anchor: next Tuesday from today = General Waste (week 0)
 const BIN_ROTATION = [
-  { type: "General Waste", icon: "🗑️" },
-  { type: "Recycling",     icon: "♻️" },
-  { type: "Garden Waste",  icon: "🌿" },
+  { type:'General Waste', icon:'🗑️' },
+  { type:'Recycling',     icon:'♻️' },
+  { type:'Garden Waste',  icon:'🌿' },
 ];
 
-function nextTuesday(fromDate, weeksAhead) {
-  const d = new Date(fromDate);
-  const day = d.getDay(); // 0=Sun,2=Tue
-  const daysUntilTue = (2 - day + 7) % 7 || 7; // days until next Tuesday (never 0)
+function nextTuesdayDate(weeksAhead) {
+  const d = new Date();
+  const day = d.getDay();
+  const daysUntilTue = (2 - day + 7) % 7 || 7;
   d.setDate(d.getDate() + daysUntilTue + weeksAhead * 7);
   return d.toISOString().slice(0, 10);
 }
 
 function calcBins() {
-  // Figure out which bin is "this coming Tuesday" by using a fixed anchor date.
-  // Anchor: 2026-07-01 (first Tuesday on or after app launch) = General Waste (index 0)
-  const ANCHOR = new Date('2026-07-01'); // General Waste Tuesday
-  const today = new Date(TODAY);
-  const day = today.getDay();
-  const daysUntilTue = (2 - day + 7) % 7 || 7;
-  const nextTue = new Date(today);
-  nextTue.setDate(today.getDate() + daysUntilTue);
-
-  // How many weeks from anchor to next Tuesday?
-  const weeksDiff = Math.round((nextTue - ANCHOR) / (7 * 86400000));
-  const startIndex = ((weeksDiff % 3) + 3) % 3; // keep positive
-
-  return BIN_ROTATION.map((bin, i) => ({
-    ...bin,
-    next: nextTuesday(TODAY, i === 0 ? 0 : i),
-    index: (startIndex + i) % 3,
-  })).map((_, i, arr) => {
-    // Re-sort so next collection is always first
-    const idx = (startIndex + i) % 3;
-    return {
-      ...BIN_ROTATION[idx],
-      next: nextTuesday(TODAY, i),
-    };
-  });
+  const ANCHOR     = new Date('2026-07-01');
+  const today      = new Date();
+  const day        = today.getDay();
+  const daysToTue  = (2 - day + 7) % 7 || 7;
+  const nextTue    = new Date(today);
+  nextTue.setDate(today.getDate() + daysToTue);
+  const weeksDiff  = Math.round((nextTue - ANCHOR) / (7 * 86400000));
+  const startIndex = ((weeksDiff % 3) + 3) % 3;
+  return BIN_ROTATION.map((_, i) => ({
+    ...BIN_ROTATION[(startIndex + i) % 3],
+    next: nextTuesdayDate(i),
+  }));
 }
 
-let binEditing = false;
 function renderBins() {
   const bins = calcBins();
   const list = document.getElementById('bin-list');
   list.innerHTML = '';
-  bins.forEach((bin) => {
+  bins.forEach(bin => {
     const d = daysUntil(bin.next);
     const urgent = d <= 1;
     const div = document.createElement('div');
     div.className = 'bin-item' + (urgent ? ' urgent' : '');
-    const dayClass = d <= 1 ? 'red' : d <= 3 ? 'orange' : 'grey';
-    const dayLabel = d === 0 ? 'TODAY' : d === 1 ? 'TOMORROW' : `${d} days`;
+    const dayClass = d<=1?'red':d<=3?'orange':'grey';
+    const dayLabel = d===0?'TODAY':d===1?'TOMORROW':`${d} days`;
     div.innerHTML = `
       <div class="bin-icon">${bin.icon}</div>
       <div style="flex:1">
-        <div class="bin-name" style="${urgent ? 'color:var(--danger);' : ''}">${bin.type}</div>
+        <div class="bin-name" style="${urgent?'color:var(--danger);':''}">${bin.type}</div>
         <div class="bin-date">Tuesday ${fmtDate(bin.next)}</div>
       </div>
       <div class="bin-days ${dayClass}">${dayLabel}</div>`;
     list.appendChild(div);
   });
 }
-renderBins();
 
 // ── TASKS ─────────────────────────────────────────────────────────────────────
+function saveTasks() { localStorage.setItem('lifesync-tasks', JSON.stringify(TASKS)); }
+
 function renderTasks() {
   const list = document.getElementById('task-list');
   list.innerHTML = '';
   const open = TASKS.filter(t => !t.done);
   const done = TASKS.filter(t => t.done);
   document.getElementById('task-count').textContent = open.length + ' open';
-
   if (!open.length && !done.length) {
-    list.innerHTML = `<div style="text-align:center;padding:16px 0;color:var(--muted);font-size:13px;">No tasks yet — add one above.</div>`;
+    list.innerHTML = `<div class="empty-state">No tasks yet — add one above.</div>`;
     return;
   }
-
   [...open, ...done].forEach((t, i, arr) => {
-    if (t.done && arr[i-1] && !arr[i-1].done) {
+    if (t.done && i > 0 && !arr[i-1].done) {
       const div = document.createElement('div');
       div.className = 'divider';
       list.appendChild(div);
@@ -697,7 +851,7 @@ function renderTasks() {
 }
 function toggleTask(id) {
   TASKS = TASKS.map(t => t.id===id ? {...t, done:!t.done} : t);
-  renderTasks();
+  saveTasks(); renderTasks();
 }
 function addTask() {
   const inp = document.getElementById('task-input');
@@ -705,20 +859,22 @@ function addTask() {
   if (!inp.value.trim()) return;
   TASKS.unshift({ id: Date.now(), text: inp.value.trim(), done: false, priority: pri });
   inp.value = '';
-  renderTasks();
+  saveTasks(); renderTasks();
 }
-document.getElementById('task-input').addEventListener('keydown', e => { if(e.key==='Enter') addTask(); });
-renderTasks();
 
 // ── LINKS ─────────────────────────────────────────────────────────────────────
+function saveLinks() { localStorage.setItem('lifesync-links', JSON.stringify(LINKS)); }
+
 function renderLinks() {
   const grid = document.getElementById('links-grid');
   grid.innerHTML = '';
+  if (!LINKS.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:span 2;">No links yet — add your first one above.</div>`;
+    return;
+  }
   LINKS.forEach(l => {
     const a = document.createElement('a');
-    a.href = l.url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
+    a.href = l.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
     a.className = 'link-item';
     a.innerHTML = `<span class="link-icon">${l.icon}</span>${l.label}`;
     grid.appendChild(a);
@@ -736,15 +892,17 @@ function addLink() {
   document.getElementById('link-label').value = '';
   document.getElementById('link-url').value = '';
   document.getElementById('add-link-form').style.display = 'none';
-  renderLinks();
+  saveLinks(); renderLinks();
 }
-renderLinks();
 
-// ── NOTES auto-save (localStorage) ───────────────────────────────────────────
-const ta = document.getElementById('notes-ta');
-const saved = localStorage.getItem('lifesync-notes');
-if (saved) ta.value = saved;
-ta.addEventListener('input', () => localStorage.setItem('lifesync-notes', ta.value));
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function daysUntil(ds) {
+  const t = new Date(TODAY), d = new Date(ds);
+  return Math.ceil((d - t) / 86400000);
+}
+function fmtDate(ds) {
+  return new Date(ds).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+}
 </script>
 </body>
 </html>
