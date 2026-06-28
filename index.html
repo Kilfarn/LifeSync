@@ -467,15 +467,27 @@ function signIn() {
 }
 
 // On page load — check if we're returning from an OAuth redirect
+// OR restore a previously saved session
 (function handleRedirect() {
+  // 1. Check for OAuth redirect first
   const hash = window.location.hash;
-  if (!hash.includes('access_token')) return;
-  const params = new URLSearchParams(hash.slice(1));
-  const accessToken = params.get('access_token');
-  if (!accessToken) return;
-  // Clean the URL
-  history.replaceState(null, '', window.location.pathname);
-  fetchUserInfo(accessToken);
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.slice(1));
+    const accessToken = params.get('access_token');
+    if (accessToken) {
+      history.replaceState(null, '', window.location.pathname);
+      fetchUserInfo(accessToken);
+      return;
+    }
+  }
+
+  // 2. Restore saved session if available
+  const saved = localStorage.getItem('lifesync-session');
+  if (saved) {
+    const user = JSON.parse(saved);
+    // Access tokens expire after 1 hour — restore profile but re-fetch calendar silently
+    onSignedIn(user, true);
+  }
 })();
 
 async function fetchUserInfo(accessToken) {
@@ -491,7 +503,7 @@ async function fetchUserInfo(accessToken) {
   }
 }
 
-function onSignedIn(user) {
+function onSignedIn(user, restoredSession) {
   // Assign colour slot — first person = p1, second = p2
   if (!knownUsers[user.email]) {
     const slot = Object.keys(knownUsers).length === 0 ? 'p1' : 'p2';
@@ -501,16 +513,62 @@ function onSignedIn(user) {
   user.slot = knownUsers[user.email];
   currentUser = user;
 
+  // Save session (without access token — it expires anyway)
+  localStorage.setItem('lifesync-session', JSON.stringify({
+    name: user.name, email: user.email, picture: user.picture, slot: user.slot
+  }));
+
   document.getElementById('signin-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
   initApp();
-  loadCalendarEvents();
+
+  // If we have a fresh access token, load calendar; otherwise prompt silently for one
+  if (user.accessToken) {
+    loadCalendarEvents();
+  } else if (!restoredSession) {
+    loadCalendarEvents();
+  } else {
+    // Restored session — silently get a new access token in the background
+    refreshCalendarToken();
+  }
+}
+
+function refreshCalendarToken() {
+  // Use prompt=none so it's silent (no popup) if the user is still logged into Google
+  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+    'client_id=' + CLIENT_ID +
+    '&redirect_uri=' + encodeURIComponent(location.origin + location.pathname) +
+    '&response_type=token' +
+    '&scope=' + encodeURIComponent('openid email profile ' + SCOPES) +
+    '&prompt=none' +
+    '&login_hint=' + encodeURIComponent(currentUser.email);
+
+  // Use a hidden iframe for the silent refresh
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = url;
+  iframe.onload = () => {
+    try {
+      const hash = iframe.contentWindow.location.hash;
+      const params = new URLSearchParams(hash.slice(1));
+      const token = params.get('access_token');
+      if (token) {
+        currentUser.accessToken = token;
+        loadCalendarEvents();
+      }
+    } catch(e) {
+      // Cross-origin — token refresh will happen on next manual sign-in
+    }
+    document.body.removeChild(iframe);
+  };
+  document.body.appendChild(iframe);
 }
 
 function signOut() {
   currentUser = null;
   EVENTS = [];
+  localStorage.removeItem('lifesync-session');
   document.getElementById('app').style.display = 'none';
   document.getElementById('signin-screen').style.display = 'flex';
 }
