@@ -485,6 +485,12 @@ let TASKS         = JSON.parse(localStorage.getItem('lifesync-tasks') || '[]');
 let LINKS         = JSON.parse(localStorage.getItem('lifesync-links') || '[]');
 let calViewDate   = new Date();
 
+const BIN_ROTATION = [
+  { type:'General Waste', icon:'🗑️' },
+  { type:'Recycling',     icon:'♻️' },
+  { type:'Garden Waste',  icon:'🌿' },
+];
+
 // Known users — maps email → colour slot (p1 or p2)
 let knownUsers    = JSON.parse(localStorage.getItem('lifesync-users') || '{}');
 
@@ -845,11 +851,6 @@ function toggleFitness(slot) {
 }
 
 // ── BINS ──────────────────────────────────────────────────────────────────────
-const BIN_ROTATION = [
-  { type:'General Waste', icon:'🗑️' },
-  { type:'Recycling',     icon:'♻️' },
-  { type:'Garden Waste',  icon:'🌿' },
-];
 
 function nextTuesdayDate(weeksAhead) {
   const d = new Date();
