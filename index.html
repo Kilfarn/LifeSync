@@ -603,24 +603,54 @@ async function loadCalendarEvents() {
 
 // ── WEATHER (Open-Meteo, no API key needed) ───────────────────────────────────
 async function loadWeather() {
-  try {
-    // Default to London coords; could use navigator.geolocation for real location
-    const lat = 51.5, lon = -0.12;
-    const r = await fetch(
+  document.getElementById('weather-desc').textContent = 'Locating…';
+
+  function fetchWeatherForCoords(lat, lon, locationName) {
+    fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
       `&current=temperature_2m,weathercode&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
+    )
+    .then(r => r.json())
+    .then(d => {
+      const code  = d.current.weathercode;
+      const icons = { 0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️', 45:'🌫️', 48:'🌫️', 51:'🌦️', 53:'🌦️', 55:'🌧️', 61:'🌧️', 63:'🌧️', 65:'🌧️', 71:'❄️', 73:'❄️', 75:'❄️', 80:'🌦️', 81:'🌧️', 82:'⛈️', 95:'⛈️' };
+      const descs = { 0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast', 45:'Foggy', 51:'Light drizzle', 61:'Light rain', 63:'Moderate rain', 65:'Heavy rain', 71:'Light snow', 80:'Rain showers', 95:'Thunderstorm' };
+      document.getElementById('weather-icon').textContent = icons[code] || '🌡️';
+      document.getElementById('weather-temp').textContent = Math.round(d.current.temperature_2m) + '°C';
+      document.getElementById('weather-desc').textContent = descs[code] || 'Mixed conditions';
+      document.getElementById('weather-hilo').textContent = `H: ${Math.round(d.daily.temperature_2m_max[0])}° / L: ${Math.round(d.daily.temperature_2m_min[0])}°`;
+      document.getElementById('weather-location').textContent = 'Weather · ' + locationName;
+    })
+    .catch(() => {
+      document.getElementById('weather-desc').textContent = 'Unable to load';
+    });
+  }
+
+  async function reverseGeocode(lat, lon) {
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+      const d = await r.json();
+      return d.address?.town || d.address?.city || d.address?.village || d.address?.county || 'Your location';
+    } catch {
+      return 'Your location';
+    }
+  }
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const locationName = await reverseGeocode(latitude, longitude);
+        fetchWeatherForCoords(latitude, longitude, locationName);
+      },
+      () => {
+        // User denied or unavailable — fall back to London
+        fetchWeatherForCoords(51.5, -0.12, 'London');
+      },
+      { timeout: 8000 }
     );
-    const d = await r.json();
-    const code  = d.current.weathercode;
-    const icons = { 0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️', 45:'🌫️', 48:'🌫️', 51:'🌦️', 53:'🌦️', 55:'🌧️', 61:'🌧️', 63:'🌧️', 65:'🌧️', 71:'❄️', 73:'❄️', 75:'❄️', 80:'🌦️', 81:'🌧️', 82:'⛈️', 95:'⛈️' };
-    const descs = { 0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast', 45:'Foggy', 51:'Light drizzle', 61:'Light rain', 63:'Moderate rain', 65:'Heavy rain', 71:'Light snow', 80:'Rain showers', 95:'Thunderstorm' };
-    document.getElementById('weather-icon').textContent = icons[code] || '🌡️';
-    document.getElementById('weather-temp').textContent = Math.round(d.current.temperature_2m) + '°C';
-    document.getElementById('weather-desc').textContent = descs[code] || 'Mixed conditions';
-    document.getElementById('weather-hilo').textContent = `H: ${Math.round(d.daily.temperature_2m_max[0])}° / L: ${Math.round(d.daily.temperature_2m_min[0])}°`;
-    document.getElementById('weather-location').textContent = 'Weather · London';
-  } catch(e) {
-    document.getElementById('weather-desc').textContent = 'Unable to load';
+  } else {
+    fetchWeatherForCoords(51.5, -0.12, 'London');
   }
 }
 
