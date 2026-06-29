@@ -394,12 +394,28 @@
   .cal-syncing { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
   a.event-item:hover  { filter: brightness(0.95); transform: translateX(2px); transition: all 0.15s; }
   a.modal-event:hover { filter: brightness(0.95); transition: filter 0.15s; }
+
+  /* ── Splash screen ── */
+  .splash {
+    position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-to) 100%);
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.35s ease;
+  }
+  .splash.fade-out { opacity: 0; pointer-events: none; }
+  .splash-logo { font-size: 36px; font-weight: 700; letter-spacing: -1px; color: var(--text); }
+  .splash-logo span { color: var(--accent); }
 </style>
 </head>
 <body>
 
+<!-- ── SPLASH SCREEN ───────────────────────────────────── -->
+<div id="splash" class="splash">
+  <div class="splash-logo">life<span>sync</span></div>
+</div>
+
 <!-- ── SIGN-IN SCREEN ──────────────────────────────────── -->
-<div id="signin-screen" class="signin-screen">
+<div id="signin-screen" class="signin-screen" style="display:none;">
   <div class="signin-logo">life<span>sync</span></div>
   <div class="signin-card">
     <div class="signin-title">Welcome home 🏠</div>
@@ -647,6 +663,12 @@ const BIN_ROTATION = [
 // Known users — maps email → colour slot (p1 or p2), stored in Firebase
 let knownUsers = {};
 
+function hideSplash() {
+  const splash = document.getElementById('splash');
+  splash.classList.add('fade-out');
+  setTimeout(() => { splash.style.display = 'none'; }, 360);
+}
+
 function signIn() {
   // Single OAuth redirect requesting profile + calendar in one go
   const url = 'https://accounts.google.com/o/oauth2/v2/auth?' +
@@ -676,10 +698,12 @@ function signIn() {
   // 2. Restore saved session if available
   const saved = localStorage.getItem('lifesync-session');
   if (saved) {
-    // Hide sign-in immediately to avoid flash while Firebase confirms the session
-    document.getElementById('signin-screen').style.display = 'none';
     const user = JSON.parse(saved);
     onSignedIn(user, true);
+  } else {
+    // No session — reveal sign-in screen
+    hideSplash();
+    document.getElementById('signin-screen').style.display = 'flex';
   }
 })();
 
@@ -692,6 +716,8 @@ async function fetchUserInfo(accessToken) {
     if (!info.email) throw new Error('No email returned');
     onSignedIn({ name: info.name, email: info.email, picture: info.picture, accessToken });
   } catch(e) {
+    hideSplash();
+    document.getElementById('signin-screen').style.display = 'flex';
     showSigninError('Sign-in failed: ' + e.message + '. Please try again.');
   }
 }
@@ -721,6 +747,7 @@ function onSignedIn(user, restoredSession) {
 
     document.getElementById('signin-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
+    hideSplash();
 
     initApp();
 
