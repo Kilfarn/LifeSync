@@ -357,6 +357,26 @@
     padding: 10px 12px; border-radius: 12px;
   }
   .modal-empty { text-align: center; padding: 16px 0; color: var(--muted); font-size: 13px; }
+
+  /* ── Event filter buttons ── */
+  .filter-btn {
+    background: rgba(255,255,255,0.5); border: 1px solid var(--border-soft);
+    border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600;
+    color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
+
+  /* ── Fitness app buttons ── */
+  .fitness-app-btn {
+    background: rgba(255,255,255,0.6); border: 1px solid var(--border-soft);
+    border-radius: 10px; padding: 10px 8px; font-size: 13px; font-weight: 600;
+    color: var(--text); cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .fitness-app-btn:hover { background: rgba(255,255,255,0.9); border-color: var(--accent); color: var(--accent); }
+
+  /* ── Bin checkbox ── */
+  .bin-check { width: 18px; height: 18px; cursor: pointer; accent-color: var(--good); flex-shrink: 0; }
   .empty-state { text-align: center; padding: 20px 0; color: var(--muted); font-size: 13px; }
   .connected-badge { font-size: 11px; color: var(--good); }
   .spinning { animation: spin 1s linear infinite; display: inline-block; }
@@ -456,37 +476,68 @@
     <div class="card col-span-2">
       <div class="sb">
         <div class="card-title">📅 Upcoming Events</div>
-        <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <div id="cal-status" class="cal-syncing"></div>
           <button class="btn-accent" id="cal-refresh-btn" onclick="reconnectCalendar()" style="display:none;">↻ Reconnect</button>
         </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;" id="event-filter-btns">
+        <button class="filter-btn active" onclick="setEventFilter(1)">1 day</button>
+        <button class="filter-btn" onclick="setEventFilter(2)">2 days</button>
+        <button class="filter-btn" onclick="setEventFilter(3)">3 days</button>
+        <button class="filter-btn" onclick="setEventFilter(5)">5 days</button>
+        <button class="filter-btn" onclick="setEventFilter(7)">7 days</button>
+        <button class="filter-btn" onclick="setEventFilter(30)">30 days</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;" id="event-list"></div>
     </div>
 
     <!-- Fitness P1 -->
-    <div class="card" id="fitness-p1-card" style="border-color:#6C8EBF44;">
+    <div class="card" id="fitness-p1-card" style="border-color:rgba(59,130,246,0.3);">
       <div class="sb">
         <div class="card-title" id="fitness-p1-title">🏃 Fitness</div>
-        <button class="btn-accent" id="fitness-p1-btn" style="background:var(--p1-soft);color:var(--p1);border-color:#6C8EBF44;" onclick="toggleFitness('p1')">Connect App</button>
+        <button class="btn-accent" id="fitness-p1-btn" onclick="showFitnessOptions('p1')">Connect App</button>
       </div>
       <div id="fitness-p1-body"><div class="empty-state">Connect your fitness app to see stats here.</div></div>
-      <div style="font-size:11px;color:var(--muted);" id="fitness-p1-apps">Supports: Strava · Garmin · Apple Health · Google Fit · Fitbit</div>
+      <div id="fitness-p1-options" style="display:none;flex-direction:column;gap:8px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:2px;">Choose your fitness app:</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p1','strava')">🟠 Strava</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p1','garmin')">⚫ Garmin</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p1','googlefit')">🔵 Google Fit</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p1','fitbit')">🟢 Fitbit</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);text-align:center;">Apple Health requires the iOS app</div>
+        <button class="btn-ghost" onclick="hideFitnessOptions('p1')" style="align-self:center;">Cancel</button>
+      </div>
     </div>
 
     <!-- Fitness P2 -->
-    <div class="card" id="fitness-p2-card" style="border-color:#D6A84E44;">
+    <div class="card" id="fitness-p2-card" style="border-color:rgba(245,158,11,0.3);">
       <div class="sb">
         <div class="card-title" id="fitness-p2-title">🏃 Fitness</div>
-        <button class="btn-accent" id="fitness-p2-btn" style="background:var(--p2-soft);color:var(--p2);border-color:#D6A84E44;" onclick="toggleFitness('p2')">Connect App</button>
+        <button class="btn-accent" id="fitness-p2-btn" style="background:var(--p2-soft);color:var(--p2);border-color:rgba(245,158,11,0.3);" onclick="showFitnessOptions('p2')">Connect App</button>
       </div>
       <div id="fitness-p2-body"><div class="empty-state">Connect your fitness app to see stats here.</div></div>
-      <div style="font-size:11px;color:var(--muted);" id="fitness-p2-apps">Supports: Strava · Garmin · Apple Health · Google Fit · Fitbit</div>
+      <div id="fitness-p2-options" style="display:none;flex-direction:column;gap:8px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:2px;">Choose your fitness app:</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p2','strava')">🟠 Strava</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p2','garmin')">⚫ Garmin</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p2','googlefit')">🔵 Google Fit</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p2','fitbit')">🟢 Fitbit</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);text-align:center;">Apple Health requires the iOS app</div>
+        <button class="btn-ghost" onclick="hideFitnessOptions('p2')" style="align-self:center;">Cancel</button>
+      </div>
     </div>
 
     <!-- Bins -->
     <div class="card">
-      <div class="card-title">🗑️ Bin Collections</div>
+      <div class="sb">
+        <div class="card-title">🗑️ Bin Collections</div>
+        <button class="btn-accent" id="notif-btn" onclick="requestBinNotifications()" style="font-size:11px;padding:4px 10px;">🔔 Enable reminders</button>
+      </div>
       <div style="display:flex;flex-direction:column;gap:8px;" id="bin-list"></div>
       <div class="tip-box muted">
         💡 Collections every <strong style="color:var(--text);">Tuesday</strong> · rotating General Waste → Recycling → Garden Waste
@@ -714,6 +765,9 @@ function initApp() {
   renderLinks();
   loadWeather();
 
+  // Re-fire bin notifications if already granted
+  if (Notification.permission === 'granted') scheduleBinNotifications();
+
   // Notes
   const ta = document.getElementById('notes-ta');
   const saved = localStorage.getItem('lifesync-notes');
@@ -940,15 +994,37 @@ function closeDayModal(e) {
 }
 
 // ── EVENTS LIST ───────────────────────────────────────────────────────────────
+let eventFilterDays = 1;
+
+function setEventFilter(days) {
+  eventFilterDays = days;
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === days + ' day' || btn.textContent.trim() === days + ' days');
+  });
+  renderEvents();
+}
+
 function renderEvents() {
   const list = document.getElementById('event-list');
   const reconnectBtn = document.getElementById('cal-refresh-btn');
   list.innerHTML = '';
-  const upcoming = EVENTS.filter(e => e.date >= TODAY)
-    .sort((a,b) => a.date.localeCompare(b.date)).slice(0, 8);
-  if (!upcoming.length) {
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() + eventFilterDays);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+  const upcoming = EVENTS
+    .filter(e => e.date >= TODAY && e.date <= cutoffStr)
+    .sort((a,b) => a.date.localeCompare(b.date));
+
+  if (!upcoming.length && !EVENTS.length) {
     list.innerHTML = `<div class="empty-state">No upcoming events — <a href="#" onclick="reconnectCalendar();return false;" style="color:var(--accent);text-decoration:underline;">sync your Google Calendar</a> to see them here.</div>`;
     if (reconnectBtn) reconnectBtn.style.display = 'inline-flex';
+    return;
+  }
+  if (!upcoming.length) {
+    list.innerHTML = `<div class="empty-state">No events in the next ${eventFilterDays} day${eventFilterDays > 1 ? 's' : ''} 🌿</div>`;
+    if (reconnectBtn) reconnectBtn.style.display = 'none';
     return;
   }
   if (reconnectBtn) reconnectBtn.style.display = 'none';
@@ -970,18 +1046,40 @@ function renderEvents() {
 }
 
 // ── FITNESS ───────────────────────────────────────────────────────────────────
-function toggleFitness(slot) {
-  const btn  = document.getElementById(`fitness-${slot}-btn`);
-  const apps = document.getElementById(`fitness-${slot}-apps`);
-  if (btn.textContent.trim() === 'Connect App') {
-    btn.textContent = '✓ Synced';
-    btn.className = 'connected-badge';
-    apps.textContent = 'Live data syncing from your connected app.';
-  } else {
-    btn.textContent = 'Connect App';
-    btn.className = 'btn-accent';
-    apps.textContent = 'Supports: Strava · Garmin · Apple Health · Google Fit · Fitbit';
-  }
+const FITNESS_OAUTH = {
+  strava:    { name: 'Strava',     url: 'https://www.strava.com/oauth/authorize?client_id=YOUR_STRAVA_CLIENT_ID&response_type=code&scope=activity:read_all' },
+  garmin:    { name: 'Garmin',     url: 'https://connect.garmin.com/oauthConfirm' },
+  googlefit: { name: 'Google Fit', url: 'https://accounts.google.com/o/oauth2/v2/auth?scope=https://www.googleapis.com/auth/fitness.activity.read&response_type=code&client_id=YOUR_GOOGLE_FIT_CLIENT_ID' },
+  fitbit:    { name: 'Fitbit',     url: 'https://www.fitbit.com/oauth2/authorize?response_type=code&client_id=YOUR_FITBIT_CLIENT_ID&scope=activity' },
+};
+
+function showFitnessOptions(slot) {
+  document.getElementById(`fitness-${slot}-body`).style.display = 'none';
+  document.getElementById(`fitness-${slot}-options`).style.display = 'flex';
+  document.getElementById(`fitness-${slot}-btn`).style.display = 'none';
+}
+
+function hideFitnessOptions(slot) {
+  document.getElementById(`fitness-${slot}-body`).style.display = '';
+  document.getElementById(`fitness-${slot}-options`).style.display = 'none';
+  document.getElementById(`fitness-${slot}-btn`).style.display = '';
+}
+
+function connectFitnessApp(slot, app) {
+  const appInfo = FITNESS_OAUTH[app];
+  // Show instructions modal since full OAuth needs API keys set up
+  const body = document.getElementById(`fitness-${slot}-body`);
+  body.style.display = '';
+  document.getElementById(`fitness-${slot}-options`).style.display = 'none';
+  document.getElementById(`fitness-${slot}-btn`).style.display = '';
+  body.innerHTML = `
+    <div class="tip-box" style="font-size:12px;line-height:1.7;">
+      <strong>To connect ${appInfo.name}:</strong><br>
+      ${app === 'strava' ? '1. Go to <a href="https://www.strava.com/settings/api" target="_blank" style="color:var(--accent);">strava.com/settings/api</a><br>2. Create an app and get your Client ID<br>3. Let us know and we\'ll wire it up!' : ''}
+      ${app === 'garmin' ? '1. Go to <a href="https://developer.garmin.com" target="_blank" style="color:var(--accent);">developer.garmin.com</a><br>2. Create a developer account<br>3. Register an app to get API credentials' : ''}
+      ${app === 'googlefit' ? '1. Enable Fitness API in your Google Cloud Console<br>2. Add fitness scopes to your OAuth credentials<br>3. We can add this alongside the calendar!' : ''}
+      ${app === 'fitbit' ? '1. Go to <a href="https://dev.fitbit.com" target="_blank" style="color:var(--accent);">dev.fitbit.com</a><br>2. Register an app and get your Client ID<br>3. Let us know and we\'ll wire it up!' : ''}
+    </div>`;
 }
 
 // ── BINS ──────────────────────────────────────────────────────────────────────
@@ -1012,22 +1110,78 @@ function calcBins() {
 function renderBins() {
   const bins = calcBins();
   const list = document.getElementById('bin-list');
+  const notifBtn = document.getElementById('notif-btn');
   list.innerHTML = '';
-  bins.forEach(bin => {
+
+  // Update notification button state
+  if (Notification.permission === 'granted') {
+    notifBtn.textContent = '🔔 Reminders on';
+    notifBtn.style.color = 'var(--good)';
+  }
+
+  bins.forEach((bin, i) => {
     const d = daysUntil(bin.next);
     const urgent = d <= 1;
+    const isToday = d === 0;
+    const checkedKey = `bin-done-${bin.next}`;
+    const isDone = localStorage.getItem(checkedKey) === 'true';
+
     const div = document.createElement('div');
-    div.className = 'bin-item' + (urgent ? ' urgent' : '');
+    div.className = 'bin-item' + (urgent && !isDone ? ' urgent' : '');
+    div.style.opacity = isDone ? '0.5' : '1';
+
     const dayClass = d<=1?'red':d<=3?'orange':'grey';
     const dayLabel = d===0?'TODAY':d===1?'TOMORROW':`${d} days`;
+
     div.innerHTML = `
       <div class="bin-icon">${bin.icon}</div>
       <div style="flex:1">
-        <div class="bin-name" style="${urgent?'color:var(--danger);':''}">${bin.type}</div>
+        <div class="bin-name" style="${urgent&&!isDone?'color:var(--danger);':''}">${bin.type}</div>
         <div class="bin-date">Tuesday ${fmtDate(bin.next)}</div>
       </div>
-      <div class="bin-days ${dayClass}">${dayLabel}</div>`;
+      ${isToday ? `
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);">
+          <input type="checkbox" class="bin-check" ${isDone?'checked':''} onchange="toggleBinDone('${bin.next}', this.checked)" />
+          ${isDone ? '<span style="color:var(--good);font-weight:600;">Done ✓</span>' : 'Put out'}
+        </label>
+      ` : `<div class="bin-days ${dayClass}">${dayLabel}</div>`}`;
     list.appendChild(div);
+  });
+}
+
+function toggleBinDone(dateStr, done) {
+  localStorage.setItem(`bin-done-${dateStr}`, done ? 'true' : 'false');
+  renderBins();
+}
+
+async function requestBinNotifications() {
+  if (!('Notification' in window)) {
+    alert('Your browser does not support notifications.');
+    return;
+  }
+  const permission = await Notification.requestPermission();
+  if (permission === 'granted') {
+    scheduleBinNotifications();
+    renderBins();
+  }
+}
+
+function scheduleBinNotifications() {
+  const bins = calcBins();
+  bins.forEach(bin => {
+    const d = daysUntil(bin.next);
+    if (d === 0) {
+      // Show notification now for today's bin
+      const checkedKey = `bin-done-${bin.next}`;
+      if (localStorage.getItem(checkedKey) !== 'true') {
+        new Notification('🗑️ Bin day!', {
+          body: `Put out ${bin.type} today`,
+          icon: '/favicon.ico',
+          tag: `bin-${bin.next}`,
+          requireInteraction: true,
+        });
+      }
+    }
   });
 }
 
