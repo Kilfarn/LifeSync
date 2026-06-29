@@ -4,6 +4,7 @@ const ASSETS = [
   '/LifeSync/index.html',
   '/LifeSync/icon-192.png',
   '/LifeSync/icon-512.png',
+  '/LifeSync/manifest.json',
 ];
 
 // Install — cache core assets
