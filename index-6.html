@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LifeSync — Home Dashboard</title>
+<link rel="manifest" href="/LifeSync/manifest.json" />
+<meta name="theme-color" content="#3B82F6" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="LifeSync" />
+<link rel="apple-touch-icon" href="/LifeSync/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+  :root {
+    --bg-from:     #e8f4fd;
+    --bg-to:       #ddeeff;
+    --glass:       rgba(255, 255, 255, 0.55);
+    --glass-hover: rgba(255, 255, 255, 0.70);
+    --glass-deep:  rgba(255, 255, 255, 0.35);
+    --border:      rgba(255, 255, 255, 0.75);
+    --border-soft: rgba(180, 210, 240, 0.5);
+    --accent:      #3B82F6;
+    --accent-soft: rgba(59, 130, 246, 0.12);
+    --p1:          #3B82F6;
+    --p1-soft:     rgba(59, 130, 246, 0.12);
+    --p2:          #F59E0B;
+    --p2-soft:     rgba(245, 158, 11, 0.12);
+    --shared:      #10B981;
+    --shared-soft: rgba(16, 185, 129, 0.12);
+    --text:        #1a2744;
+    --muted:       #6B7FA8;
+    --danger:      #EF4444;
+    --warn:        #F59E0B;
+    --good:        #10B981;
+    --shadow:      0 8px 32px rgba(59, 100, 180, 0.12);
+    --shadow-sm:   0 2px 12px rgba(59, 100, 180, 0.08);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-to) 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  /* Subtle animated background blobs for depth */
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, #a8d4f8, #c4e0f9);
+    top: -200px; right: -100px;
+  }
+  body::after {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, #b8e8d4, #d4f0e8);
+    bottom: -150px; left: -100px;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea, select { font-family: inherit; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.2); border-radius: 3px; }
+
+  /* ── Sign-in screen ── */
+  .signin-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    padding: 40px 20px;
+    position: relative;
+    z-index: 1;
+  }
+  .signin-logo { font-size: 36px; font-weight: 700; letter-spacing: -1px; color: var(--text); }
+  .signin-logo span { color: var(--accent); }
+  .signin-card {
+    background: var(--glass);
+    backdrop-filter: blur(24px) saturate(1.8);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 36px 40px;
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .signin-title { font-size: 20px; font-weight: 700; color: var(--text); }
+  .signin-sub   { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .signin-features { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; }
+  .signin-feature { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .signin-feature span:first-child { font-size: 16px; }
+  .google-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; color: #3c4043;
+    border: 1px solid #dadce0; border-radius: 10px;
+    padding: 10px 20px; font-size: 14px; font-weight: 600;
+    cursor: pointer; width: 100%; justify-content: center;
+    transition: box-shadow 0.15s;
+  }
+  .google-btn:hover { box-shadow: 0 2px 12px rgba(59,130,246,0.2); }
+  .google-logo { width: 18px; height: 18px; }
+
+  /* ── Header ── */
+  .header {
+    background: var(--glass);
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-sm);
+  }
+  .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+  .logo span { color: var(--accent); }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .greeting { color: var(--muted); font-size: 14px; }
+  .user-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 12px 5px 6px;
+    font-size: 13px; font-weight: 600; color: var(--text);
+  }
+  .user-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+  .user-avatar-placeholder {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff;
+  }
+  .signout-btn {
+    background: rgba(255,255,255,0.6);
+    border: 1px solid var(--border-soft);
+    color: var(--muted); border-radius: 8px;
+    padding: 5px 10px; font-size: 11px; cursor: pointer;
+  }
+  .signout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* ── Layout ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    padding: 24px 28px;
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } .col-span-2 { grid-column: span 1 !important; } }
+  @media (max-width: 700px)  { .grid { grid-template-columns: 1fr; padding: 16px; } .col-span-2 { grid-column: span 1 !important; } }
+  .col-span-2 { grid-column: span 2; }
+
+  /* ── Cards (glass panels) ── */
+  .card {
+    background: var(--glass);
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: var(--shadow);
+    transition: background 0.2s;
+  }
+  .card:hover {
+    background: var(--glass-hover);
+  }
+  .card-title {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .sb  { display: flex; align-items: center; justify-content: space-between; }
+
+  /* ── Pills ── */
+  .pill { border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 600; border: 1px solid; }
+  .pill-p1     { background: var(--p1-soft);     color: var(--p1);     border-color: rgba(59,130,246,0.3); }
+  .pill-p2     { background: var(--p2-soft);     color: var(--p2);     border-color: rgba(245,158,11,0.3); }
+  .pill-shared { background: var(--shared-soft); color: var(--shared); border-color: rgba(16,185,129,0.3); }
+  .pill-accent { background: var(--accent-soft); color: var(--accent); border-color: rgba(59,130,246,0.3); }
+
+  /* ── Buttons ── */
+  .btn-accent {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-soft); color: var(--accent);
+    border: 1px solid rgba(59,130,246,0.3); border-radius: 8px;
+    padding: 6px 13px; font-size: 12px; font-weight: 600;
+  }
+  .btn-accent:hover { background: rgba(59,130,246,0.18); }
+  .btn-ghost {
+    background: rgba(255,255,255,0.5); border: 1px solid var(--border-soft);
+    color: var(--muted); border-radius: 6px; padding: 4px 10px; font-size: 11px;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-add {
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+  }
+  .btn-add:hover { filter: brightness(1.1); }
+
+  /* ── Inputs ── */
+  .input {
+    background: rgba(255,255,255,0.6);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px; color: var(--text);
+    padding: 8px 12px; font-size: 13px; outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .input:focus { border-color: var(--accent); background: rgba(255,255,255,0.85); }
+  .input-flex { flex: 1; }
+  .input option { background: #fff; color: var(--text); }
+
+  /* ── Weather ── */
+  .weather-icon { font-size: 38px; line-height: 1; }
+  .weather-temp { font-size: 30px; font-weight: 700; letter-spacing: -1px; margin-top: 4px; color: var(--text); }
+
+  /* ── Events ── */
+  .event-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; border: 1px solid transparent; }
+  .event-p1     { background: var(--p1-soft);     border-color: rgba(59,130,246,0.2); }
+  .event-p2     { background: var(--p2-soft);     border-color: rgba(245,158,11,0.2); }
+  .event-shared { background: var(--shared-soft); border-color: rgba(16,185,129,0.2); }
+  .event-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .event-title { font-size: 14px; font-weight: 500; color: var(--text); }
+  .event-sub   { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .event-when  { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  /* ── Full month calendar ── */
+  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .month-nav-btn {
+    background: rgba(255,255,255,0.6); border: 1px solid var(--border-soft); color: var(--text);
+    border-radius: 8px; width: 30px; height: 30px; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .month-nav-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(255,255,255,0.9); }
+  .month-title { font-size: 14px; font-weight: 700; color: var(--text); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-hdr  { text-align: center; font-size: 10px; color: var(--muted); font-weight: 700; padding: 4px 0; }
+  .cal-day  {
+    text-align: center; padding: 6px 2px 4px; border-radius: 8px;
+    border: 1px solid transparent; font-size: 12px; min-height: 46px; cursor: default;
+    color: var(--text);
+  }
+  .cal-day.today { background: var(--accent); color: #fff; font-weight: 700; box-shadow: 0 2px 8px rgba(59,130,246,0.4); }
+  .cal-day.other-month { opacity: 0.35; }
+  .cal-day.has-events { border-color: var(--border-soft); background: rgba(255,255,255,0.4); }
+  .cal-day:not(.other-month):hover { background: rgba(255,255,255,0.6); border-color: var(--accent); }
+  .cal-day-num { font-size: 12px; font-weight: 500; line-height: 1; }
+  .cal-dots { display: flex; justify-content: center; gap: 2px; margin-top: 4px; flex-wrap: wrap; }
+  .cal-dot  { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Stats ── */
+  .stat-row { display: flex; gap: 8px; }
+  .stat-box { background: var(--glass-deep); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; flex: 1; text-align: center; }
+  .stat-num   { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+  .stat-label { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .stat-wide  { flex: 2; text-align: left; }
+  .stat-wide .stat-label { font-size: 11px; }
+  .stat-wide .stat-num   { font-size: 14px; font-weight: 600; margin-top: 3px; }
+
+  /* ── Bins ── */
+  .bin-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border-soft); background: var(--glass-deep); }
+  .bin-item.urgent { border-color: var(--danger); background: rgba(239,68,68,0.08); }
+  .bin-icon  { font-size: 22px; }
+  .bin-name  { font-size: 14px; font-weight: 600; color: var(--text); }
+  .bin-date  { font-size: 12px; color: var(--muted); }
+  .bin-days  { font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .bin-days.red    { color: var(--danger); }
+  .bin-days.orange { color: var(--warn); }
+  .bin-days.grey   { color: var(--muted); }
+
+  /* ── Tasks ── */
+  .task-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(180,210,240,0.4); }
+  .task-item:last-child { border-bottom: none; }
+  .task-cb   { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0; }
+  .task-text { flex: 1; font-size: 14px; color: var(--text); }
+  .task-text.done { text-decoration: line-through; opacity: 0.4; }
+  .task-tag  { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 8px; border: 1px solid; white-space: nowrap; }
+  .tag-high   { background: rgba(239,68,68,0.1);  color: var(--danger); border-color: rgba(239,68,68,0.3); }
+  .tag-medium { background: rgba(245,158,11,0.1); color: var(--warn);   border-color: rgba(245,158,11,0.3); }
+  .tag-low    { background: rgba(107,127,168,0.1);color: var(--muted);  border-color: rgba(107,127,168,0.3); }
+  .task-add-row { display: flex; gap: 6px; }
+
+  /* ── Links ── */
+  .links-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .link-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--glass-deep); border: 1px solid var(--border-soft); border-radius: 12px; font-size: 13px; font-weight: 500; color: var(--text); transition: all 0.15s; }
+  .link-item:hover { background: rgba(255,255,255,0.7); border-color: var(--accent); color: var(--accent); }
+  .link-icon { font-size: 16px; }
+
+  /* ── Misc ── */
+  .tip-box { background: var(--accent-soft); border-radius: 10px; padding: 10px 14px; font-size: 12px; color: var(--accent); line-height: 1.6; border: 1px solid rgba(59,130,246,0.2); }
+  .tip-box.muted { background: var(--glass-deep); border: 1px solid var(--border-soft); color: var(--muted); }
+  .notes-ta { width: 100%; height: 130px; resize: vertical; line-height: 1.6; }
+  .divider  { height: 1px; background: rgba(180,210,240,0.5); margin: 6px 0; }
+  .footer   { text-align: center; padding: 20px 0 32px; color: var(--muted); font-size: 12px; position: relative; z-index: 1; }
+
+  /* ── Day modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(30, 60, 120, 0.25);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(24px) saturate(1.8);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 20px 60px rgba(59,100,180,0.2);
+    transform: translateY(12px);
+    transition: transform 0.2s;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; }
+  .modal-title  { font-size: 16px; font-weight: 700; color: var(--text); }
+  .modal-date   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .modal-close  {
+    background: rgba(180,210,240,0.3); border: 1px solid var(--border-soft);
+    border-radius: 8px; width: 32px; height: 32px; font-size: 16px;
+    color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { background: rgba(239,68,68,0.1); color: var(--danger); border-color: rgba(239,68,68,0.3); }
+  .modal-event {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 12px;
+  }
+  .modal-empty { text-align: center; padding: 16px 0; color: var(--muted); font-size: 13px; }
+
+  /* ── Event filter buttons ── */
+  .filter-btn {
+    background: rgba(255,255,255,0.5); border: 1px solid var(--border-soft);
+    border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600;
+    color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
+
+  /* ── Fitness app buttons ── */
+  .fitness-app-btn {
+    background: rgba(255,255,255,0.6); border: 1px solid var(--border-soft);
+    border-radius: 10px; padding: 10px 8px; font-size: 13px; font-weight: 600;
+    color: var(--text); cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .fitness-app-btn:hover { background: rgba(255,255,255,0.9); border-color: var(--accent); color: var(--accent); }
+
+  /* ── Bin checkbox ── */
+  .bin-check { width: 18px; height: 18px; cursor: pointer; accent-color: var(--good); flex-shrink: 0; }
+  .empty-state { text-align: center; padding: 20px 0; color: var(--muted); font-size: 13px; }
+  .connected-badge { font-size: 11px; color: var(--good); }
+  .spinning { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .cal-syncing { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+
+<!-- ── SIGN-IN SCREEN ──────────────────────────────────── -->
+<div id="signin-screen" class="signin-screen">
+  <div class="signin-logo">life<span>sync</span></div>
+  <div class="signin-card">
+    <div class="signin-title">Welcome home 🏠</div>
+    <div class="signin-sub">Sign in with Google to access your shared household dashboard.</div>
+    <div class="signin-features">
+      <div class="signin-feature"><span>📅</span><span>Your Google Calendar, synced automatically</span></div>
+      <div class="signin-feature"><span>👫</span><span>Shared tasks and notes with your partner</span></div>
+      <div class="signin-feature"><span>🗑️</span><span>Bin day reminders, fitness tracking & more</span></div>
+    </div>
+    <button class="google-btn" onclick="signIn()">
+      <svg class="google-logo" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+        <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.962L3.964 6.294C4.672 4.169 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <div id="signin-error" style="font-size:12px;color:var(--danger);display:none;"></div>
+  </div>
+</div>
+
+<!-- ── MAIN APP (hidden until signed in) ──────────────── -->
+<div id="app" style="display:none;">
+
+  <header class="header">
+    <div class="row">
+      <div class="logo">life<span>sync</span></div>
+      <div class="greeting" id="greeting"></div>
+    </div>
+    <div class="header-right">
+      <div id="user-badge" class="user-badge"></div>
+      <button class="signout-btn" onclick="signOut()">Sign out</button>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- Weather -->
+    <div class="card" style="flex-direction:row;align-items:center;gap:20px;">
+      <div id="weather-icon" class="weather-icon">⛅</div>
+      <div style="flex:1">
+        <div class="card-title" id="weather-location">Weather</div>
+        <div class="weather-temp" id="weather-temp">--°C</div>
+        <div style="color:var(--muted);font-size:13px;" id="weather-desc">Loading…</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;color:var(--muted);" id="weather-hilo"></div>
+        <div id="date-display" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <!-- Full Month Calendar -->
+    <div class="card">
+      <div class="month-nav">
+        <button class="month-nav-btn" onclick="changeMonth(-1)">‹</button>
+        <div class="month-title" id="month-title"></div>
+        <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
+      </div>
+      <div class="cal-grid" id="month-cal">
+        <div class="cal-hdr">Mo</div><div class="cal-hdr">Tu</div><div class="cal-hdr">We</div>
+        <div class="cal-hdr">Th</div><div class="cal-hdr">Fr</div><div class="cal-hdr">Sa</div><div class="cal-hdr">Su</div>
+      </div>
+      <div class="row" style="padding-top:2px;" id="cal-legend"></div>
+    </div>
+
+    <!-- Tasks -->
+    <div class="card" style="grid-row:span 2;">
+      <div class="sb">
+        <div class="card-title">✅ Household Tasks</div>
+        <span id="task-count" style="font-size:12px;color:var(--muted);"></span>
+      </div>
+      <div class="task-add-row">
+        <input class="input input-flex" id="task-input" placeholder="Add a task…" />
+        <select class="input" id="task-priority" style="width:72px;">
+          <option value="high">High</option>
+          <option value="medium" selected>Med</option>
+          <option value="low">Low</option>
+        </select>
+        <button class="btn-add" onclick="addTask()">+</button>
+      </div>
+      <div id="task-list"></div>
+    </div>
+
+    <!-- Calendar Events -->
+    <div class="card col-span-2">
+      <div class="sb">
+        <div class="card-title">📅 Upcoming Events</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div id="cal-status" class="cal-syncing"></div>
+          <button class="btn-accent" id="cal-refresh-btn" onclick="reconnectCalendar()" style="display:none;">↻ Reconnect</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;" id="event-filter-btns">
+        <button class="filter-btn active" onclick="setEventFilter(1)">1 day</button>
+        <button class="filter-btn" onclick="setEventFilter(2)">2 days</button>
+        <button class="filter-btn" onclick="setEventFilter(3)">3 days</button>
+        <button class="filter-btn" onclick="setEventFilter(5)">5 days</button>
+        <button class="filter-btn" onclick="setEventFilter(7)">7 days</button>
+        <button class="filter-btn" onclick="setEventFilter(30)">30 days</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;" id="event-list"></div>
+    </div>
+
+    <!-- Fitness P1 -->
+    <div class="card" id="fitness-p1-card" style="border-color:rgba(59,130,246,0.3);">
+      <div class="sb">
+        <div class="card-title" id="fitness-p1-title">🏃 Fitness</div>
+        <button class="btn-accent" id="fitness-p1-btn" onclick="showFitnessOptions('p1')">Connect App</button>
+      </div>
+      <div id="fitness-p1-body"><div class="empty-state">Connect your fitness app to see stats here.</div></div>
+      <div id="fitness-p1-options" style="display:none;flex-direction:column;gap:8px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:2px;">Choose your fitness app:</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p1','strava')">🟠 Strava</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p1','garmin')">⚫ Garmin</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p1','googlefit')">🔵 Google Fit</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p1','fitbit')">🟢 Fitbit</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);text-align:center;">Apple Health requires the iOS app</div>
+        <button class="btn-ghost" onclick="hideFitnessOptions('p1')" style="align-self:center;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Fitness P2 -->
+    <div class="card" id="fitness-p2-card" style="border-color:rgba(245,158,11,0.3);">
+      <div class="sb">
+        <div class="card-title" id="fitness-p2-title">🏃 Fitness</div>
+        <button class="btn-accent" id="fitness-p2-btn" style="background:var(--p2-soft);color:var(--p2);border-color:rgba(245,158,11,0.3);" onclick="showFitnessOptions('p2')">Connect App</button>
+      </div>
+      <div id="fitness-p2-body"><div class="empty-state">Connect your fitness app to see stats here.</div></div>
+      <div id="fitness-p2-options" style="display:none;flex-direction:column;gap:8px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:2px;">Choose your fitness app:</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p2','strava')">🟠 Strava</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p2','garmin')">⚫ Garmin</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p2','googlefit')">🔵 Google Fit</button>
+          <button class="fitness-app-btn" onclick="connectFitnessApp('p2','fitbit')">🟢 Fitbit</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);text-align:center;">Apple Health requires the iOS app</div>
+        <button class="btn-ghost" onclick="hideFitnessOptions('p2')" style="align-self:center;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Bins -->
+    <div class="card">
+      <div class="sb">
+        <div class="card-title">🗑️ Bin Collections</div>
+        <button class="btn-accent" id="notif-btn" onclick="requestBinNotifications()" style="font-size:11px;padding:4px 10px;">🔔 Enable reminders</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;" id="bin-list"></div>
+      <div class="tip-box muted">
+        💡 Collections every <strong style="color:var(--text);">Tuesday</strong> · alternating General Waste and Recycling
+      </div>
+    </div>
+
+    <!-- Shared Notes -->
+    <div class="card">
+      <div class="sb">
+        <div class="card-title">📝 Shared Notes</div>
+        <span id="notes-status" style="font-size:11px;color:var(--good);"></span>
+      </div>
+      <textarea class="input notes-ta" id="notes-ta" placeholder="Jot down anything for both of you…"></textarea>
+      <div style="font-size:11px;color:var(--muted);">✓ Synced with your partner in real time</div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="card">
+      <div class="sb">
+        <div class="card-title">🔗 Quick Links</div>
+        <button class="btn-accent" onclick="toggleAddLink()">+ Add link</button>
+      </div>
+      <div id="add-link-form" style="display:none;flex-direction:column;gap:6px;">
+        <input class="input" id="link-label" placeholder="Label (e.g. Council Website)" />
+        <input class="input" id="link-url" placeholder="https://…" />
+        <button class="btn-add" style="align-self:flex-start;" onclick="addLink()">Save link</button>
+      </div>
+      <div class="links-grid" id="links-grid"></div>
+    </div>
+
+  </div>
+  <div class="footer">lifesync · your home, in sync</div>
+
+  <!-- Day detail modal -->
+  <div class="modal-overlay" id="day-modal" onclick="closeDayModal(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="modal-title"></div>
+          <div class="modal-date" id="modal-date"></div>
+        </div>
+        <button class="modal-close" onclick="closeDayModal()">✕</button>
+      </div>
+      <div id="modal-events"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── SERVICE WORKER ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/LifeSync/sw.js')
+    .then(reg => console.log('SW registered:', reg.scope))
+    .catch(err => console.log('SW registration failed:', err));
+}
+
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyCsu27r3D_iuGvYpymUYJdwWVasWEt5EM0",
+  authDomain:        "lifesync-b8d8c.firebaseapp.com",
+  databaseURL:       "https://lifesync-b8d8c-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "lifesync-b8d8c",
+  storageBucket:     "lifesync-b8d8c.firebasestorage.app",
+  messagingSenderId: "723047637954",
+  appId:             "1:723047637954:web:aa78f1606c60410cde6c5b",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const CLIENT_ID = '149756037546-g9526tagfjpem4dc0cmqlnkiksvffdli.apps.googleusercontent.com';
+const SCOPES    = 'https://www.googleapis.com/auth/calendar.readonly';
+const TODAY     = new Date().toISOString().slice(0, 10);
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let currentUser = null;
+let EVENTS      = [];
+let calViewDate = new Date();
+let notesTimeout = null;
+
+const BIN_ROTATION = [
+  { type:'General Waste', icon:'🗑️' },
+  { type:'Recycling',     icon:'♻️' },
+];
+
+// Known users — maps email → colour slot (p1 or p2), stored in Firebase
+let knownUsers = {};
+
+function signIn() {
+  // Single OAuth redirect requesting profile + calendar in one go
+  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+    'client_id=' + CLIENT_ID +
+    '&redirect_uri=' + encodeURIComponent(location.origin + location.pathname) +
+    '&response_type=token' +
+    '&scope=' + encodeURIComponent('openid email profile ' + SCOPES) +
+    '&prompt=select_account';
+  window.location.href = url;
+}
+
+// On page load — check if we're returning from an OAuth redirect
+// OR restore a previously saved session
+(function handleRedirect() {
+  // 1. Check for OAuth redirect first
+  const hash = window.location.hash;
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.slice(1));
+    const accessToken = params.get('access_token');
+    if (accessToken) {
+      history.replaceState(null, '', window.location.pathname);
+      fetchUserInfo(accessToken);
+      return;
+    }
+  }
+
+  // 2. Restore saved session if available
+  const saved = localStorage.getItem('lifesync-session');
+  if (saved) {
+    const user = JSON.parse(saved);
+    // Access tokens expire after 1 hour — restore profile but re-fetch calendar silently
+    onSignedIn(user, true);
+  }
+})();
+
+async function fetchUserInfo(accessToken) {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    const info = await r.json();
+    if (!info.email) throw new Error('No email returned');
+    onSignedIn({ name: info.name, email: info.email, picture: info.picture, accessToken });
+  } catch(e) {
+    showSigninError('Sign-in failed: ' + e.message + '. Please try again.');
+  }
+}
+
+function onSignedIn(user, restoredSession) {
+  // Look up or register user slot in Firebase
+  const usersRef = db.ref('users');
+  usersRef.once('value', snapshot => {
+    const users = snapshot.val() || {};
+    knownUsers = users;
+
+    if (!users[btoa(user.email)]) {
+      // New user — assign slot based on how many users exist
+      const slot = Object.keys(users).length === 0 ? 'p1' : 'p2';
+      users[btoa(user.email)] = { slot, name: user.name, email: user.email, picture: user.picture || '' };
+      db.ref('users/' + btoa(user.email)).set(users[btoa(user.email)]);
+      knownUsers = users;
+    }
+
+    user.slot = users[btoa(user.email)].slot;
+    currentUser = user;
+
+    // Save session locally (no access token — expires anyway)
+    localStorage.setItem('lifesync-session', JSON.stringify({
+      name: user.name, email: user.email, picture: user.picture, slot: user.slot
+    }));
+
+    document.getElementById('signin-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+    initApp();
+
+    if (user.accessToken) {
+      loadCalendarEvents();
+    } else if (restoredSession) {
+      refreshCalendarToken();
+    }
+  });
+}
+
+function refreshCalendarToken() {
+  // Use prompt=none so it's silent (no popup) if the user is still logged into Google
+  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+    'client_id=' + CLIENT_ID +
+    '&redirect_uri=' + encodeURIComponent(location.origin + location.pathname) +
+    '&response_type=token' +
+    '&scope=' + encodeURIComponent('openid email profile ' + SCOPES) +
+    '&prompt=none' +
+    '&login_hint=' + encodeURIComponent(currentUser.email);
+
+  // Use a hidden iframe for the silent refresh
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = url;
+  iframe.onload = () => {
+    try {
+      const hash = iframe.contentWindow.location.hash;
+      const params = new URLSearchParams(hash.slice(1));
+      const token = params.get('access_token');
+      if (token) {
+        currentUser.accessToken = token;
+        loadCalendarEvents();
+      }
+    } catch(e) {
+      // Cross-origin — token refresh will happen on next manual sign-in
+    }
+    document.body.removeChild(iframe);
+  };
+  document.body.appendChild(iframe);
+}
+
+function signOut() {
+  currentUser = null;
+  EVENTS = [];
+  localStorage.removeItem('lifesync-session');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('signin-screen').style.display = 'flex';
+}
+
+function showSigninError(msg) {
+  const el = document.getElementById('signin-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ── INIT APP ──────────────────────────────────────────────────────────────────
+function initApp() {
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('greeting').textContent = `— ${greet} 👋`;
+  document.getElementById('date-display').textContent =
+    new Date().toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+
+  // User badge
+  const slot  = currentUser.slot;
+  const color = slot === 'p1' ? 'var(--p1)' : 'var(--p2)';
+  const badge = document.getElementById('user-badge');
+  const initial = currentUser.name.charAt(0).toUpperCase();
+  badge.innerHTML = currentUser.picture
+    ? `<img class="user-avatar" src="${currentUser.picture}" referrerpolicy="no-referrer" /> ${currentUser.name.split(' ')[0]}`
+    : `<div class="user-avatar-placeholder" style="background:${color}">${initial}</div> ${currentUser.name.split(' ')[0]}`;
+
+  // Listen for all users to populate partner info dynamically
+  db.ref('users').on('value', snapshot => {
+    knownUsers = snapshot.val() || {};
+    updatePartnerDisplay(knownUsers);
+  });
+
+  // ── Firebase real-time listeners ──────────────────────────
+  // Tasks
+  db.ref('tasks').on('value', snapshot => {
+    const data = snapshot.val();
+    TASKS = data ? Object.values(data) : [];
+    renderTasks();
+  });
+
+  // Links
+  db.ref('links').on('value', snapshot => {
+    const data = snapshot.val();
+    LINKS = data ? Object.values(data) : [];
+    renderLinks();
+  });
+
+  // Notes
+  db.ref('notes').on('value', snapshot => {
+    const ta = document.getElementById('notes-ta');
+    const val = snapshot.val() || '';
+    if (document.activeElement !== ta) ta.value = val;
+  });
+  document.getElementById('notes-ta').addEventListener('input', e => {
+    clearTimeout(notesTimeout);
+    notesTimeout = setTimeout(() => db.ref('notes').set(e.target.value), 800);
+  });
+
+  // Partner calendar events (both users write their events, both read all)
+  db.ref('calendar').on('value', snapshot => {
+    const data = snapshot.val() || {};
+    EVENTS = Object.values(data).flat();
+    renderEvents();
+    renderMonthCal();
+  });
+
+  document.getElementById('task-input').addEventListener('keydown', e => { if(e.key==='Enter') addTask(); });
+
+  renderMonthCal();
+  renderEvents();
+  renderBins();
+  loadWeather();
+
+  if (Notification.permission === 'granted') scheduleBinNotifications();
+  updateNotifBtn();
+}
+
+function updatePartnerDisplay(users) {
+  const entries     = Object.values(users);
+  const me          = entries.find(u => u.email === currentUser.email);
+  const partner     = entries.find(u => u.email !== currentUser.email);
+  const myName      = me?.name?.split(' ')[0]      || 'You';
+  const partnerName = partner?.name?.split(' ')[0] || 'Partner';
+  const mySlot      = me?.slot      || currentUser.slot;
+  const partnerSlot = partner?.slot || (mySlot === 'p1' ? 'p2' : 'p1');
+
+  document.getElementById(`fitness-${mySlot}-title`).innerHTML =
+    `🏃 Fitness · <span style="color:var(--${mySlot});">${myName}</span>`;
+  document.getElementById(`fitness-${partnerSlot}-title`).innerHTML =
+    `🏃 Fitness · <span style="color:var(--${partnerSlot});">${partnerName}</span>`;
+
+  document.getElementById('cal-legend').innerHTML = `
+    <span class="pill pill-p1">${mySlot === 'p1' ? myName : partnerName}</span>
+    <span class="pill pill-p2">${mySlot === 'p2' ? myName : partnerName}</span>
+    <span class="pill pill-shared">Shared</span>`;
+}
+
+// ── GOOGLE CALENDAR ───────────────────────────────────────────────────────────
+async function loadCalendarEvents() {
+  const status = document.getElementById('cal-status');
+  const reconnectBtn = document.getElementById('cal-refresh-btn');
+
+  if (!currentUser?.accessToken) {
+    status.innerHTML = `<span style="color:var(--muted)">Token expired</span>`;
+    if (reconnectBtn) reconnectBtn.style.display = 'inline-flex';
+    return;
+  }
+
+  if (reconnectBtn) reconnectBtn.style.display = 'none';
+  status.innerHTML = `<span class="spinning">↻</span> Syncing…`;
+
+  try {
+    const now    = new Date().toISOString();
+    const future = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const url    = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
+      `timeMin=${encodeURIComponent(now)}&timeMax=${encodeURIComponent(future)}` +
+      `&singleEvents=true&orderBy=startTime&maxResults=20`;
+
+    const r    = await fetch(url, { headers: { Authorization: `Bearer ${currentUser.accessToken}` } });
+    const data = await r.json();
+
+    if (data.error) {
+      if (data.error.code === 401) {
+        currentUser.accessToken = null;
+        status.innerHTML = `<span style="color:var(--muted)">Token expired</span>`;
+        if (reconnectBtn) reconnectBtn.style.display = 'inline-flex';
+        return;
+      }
+      throw new Error(data.error.message);
+    }
+
+    EVENTS = (data.items || []).map(item => ({
+      id:    item.id,
+      title: item.summary || '(No title)',
+      date:  (item.start.dateTime || item.start.date).slice(0, 10),
+      time:  item.start.dateTime ? new Date(item.start.dateTime).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) : 'All day',
+      cal:   currentUser.slot,
+    }));
+
+    // Write this user's events to Firebase so partner sees them
+    db.ref('calendar/' + currentUser.slot).set(EVENTS);
+
+    status.innerHTML = `<span style="color:var(--good)">✓ Synced</span>`;
+    if (reconnectBtn) reconnectBtn.style.display = 'none';
+    renderEvents();
+    renderMonthCal();
+
+  } catch(e) {
+    status.innerHTML = `<span style="color:var(--danger)">⚠ ${e.message}</span>`;
+    if (reconnectBtn) reconnectBtn.style.display = 'inline-flex';
+  }
+}
+
+function reconnectCalendar() {
+  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+    'client_id=' + CLIENT_ID +
+    '&redirect_uri=' + encodeURIComponent(location.origin + location.pathname) +
+    '&response_type=token' +
+    '&scope=' + encodeURIComponent('openid email profile ' + SCOPES) +
+    '&prompt=none' +
+    '&login_hint=' + encodeURIComponent(currentUser.email);
+  window.location.href = url;
+}
+
+// ── WEATHER (Open-Meteo, no API key needed) ───────────────────────────────────
+async function loadWeather() {
+  document.getElementById('weather-desc').textContent = 'Locating…';
+
+  function fetchWeatherForCoords(lat, lon, locationName) {
+    fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,weathercode&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
+    )
+    .then(r => r.json())
+    .then(d => {
+      const code  = d.current.weathercode;
+      const icons = { 0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️', 45:'🌫️', 48:'🌫️', 51:'🌦️', 53:'🌦️', 55:'🌧️', 61:'🌧️', 63:'🌧️', 65:'🌧️', 71:'❄️', 73:'❄️', 75:'❄️', 80:'🌦️', 81:'🌧️', 82:'⛈️', 95:'⛈️' };
+      const descs = { 0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast', 45:'Foggy', 51:'Light drizzle', 61:'Light rain', 63:'Moderate rain', 65:'Heavy rain', 71:'Light snow', 80:'Rain showers', 95:'Thunderstorm' };
+      document.getElementById('weather-icon').textContent = icons[code] || '🌡️';
+      document.getElementById('weather-temp').textContent = Math.round(d.current.temperature_2m) + '°C';
+      document.getElementById('weather-desc').textContent = descs[code] || 'Mixed conditions';
+      document.getElementById('weather-hilo').textContent = `H: ${Math.round(d.daily.temperature_2m_max[0])}° / L: ${Math.round(d.daily.temperature_2m_min[0])}°`;
+      document.getElementById('weather-location').textContent = 'Weather · ' + locationName;
+    })
+    .catch(() => {
+      document.getElementById('weather-desc').textContent = 'Unable to load';
+    });
+  }
+
+  async function reverseGeocode(lat, lon) {
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+      const d = await r.json();
+      return d.address?.town || d.address?.city || d.address?.village || d.address?.county || 'Your location';
+    } catch {
+      return 'Your location';
+    }
+  }
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const locationName = await reverseGeocode(latitude, longitude);
+        fetchWeatherForCoords(latitude, longitude, locationName);
+      },
+      () => {
+        // User denied or unavailable — fall back to London
+        fetchWeatherForCoords(51.5, -0.12, 'London');
+      },
+      { timeout: 8000 }
+    );
+  } else {
+    fetchWeatherForCoords(51.5, -0.12, 'London');
+  }
+}
+
+// ── CALENDAR RENDER ───────────────────────────────────────────────────────────
+function renderMonthCal() {
+  const grid = document.getElementById('month-cal');
+  const headers = Array.from(grid.children).slice(0, 7);
+  grid.innerHTML = '';
+  headers.forEach(h => grid.appendChild(h));
+
+  const year  = calViewDate.getFullYear();
+  const month = calViewDate.getMonth();
+  document.getElementById('month-title').textContent =
+    new Date(year, month, 1).toLocaleDateString('en-GB', { month:'long', year:'numeric' });
+
+  const firstDay  = new Date(year, month, 1).getDay();
+  const offset    = (firstDay === 0) ? 6 : firstDay - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrev  = new Date(year, month, 0).getDate();
+
+  for (let i = offset - 1; i >= 0; i--) {
+    const d = document.createElement('div');
+    d.className = 'cal-day other-month';
+    d.innerHTML = `<div class="cal-day-num">${daysInPrev - i}</div>`;
+    grid.appendChild(d);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dayEvs  = EVENTS.filter(e => e.date === ds);
+    const isToday = ds === TODAY;
+    const d = document.createElement('div');
+    d.className = 'cal-day' + (isToday ? ' today' : '') + (dayEvs.length ? ' has-events' : '');
+    let dotsHTML = '';
+    if (dayEvs.length) {
+      dotsHTML = '<div class="cal-dots">' +
+        dayEvs.slice(0,3).map(ev => {
+          const col = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
+          return `<div class="cal-dot" style="background:${col}"></div>`;
+        }).join('') + '</div>';
+    }
+    d.innerHTML = `<div class="cal-day-num">${day}</div>${dotsHTML}`;
+    d.style.cursor = 'pointer';
+    d.addEventListener('click', () => openDayModal(ds));
+    grid.appendChild(d);
+  }
+
+  const total = offset + daysInMonth;
+  const remainder = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let i = 1; i <= remainder; i++) {
+    const d = document.createElement('div');
+    d.className = 'cal-day other-month';
+    d.innerHTML = `<div class="cal-day-num">${i}</div>`;
+    grid.appendChild(d);
+  }
+}
+
+function changeMonth(dir) {
+  calViewDate.setMonth(calViewDate.getMonth() + dir);
+  renderMonthCal();
+}
+
+function openDayModal(ds) {
+  const dayEvs = EVENTS.filter(e => e.date === ds);
+  const date   = new Date(ds);
+  const isToday = ds === TODAY;
+
+  document.getElementById('modal-title').textContent =
+    isToday ? 'Today' : date.toLocaleDateString('en-GB', { weekday: 'long' });
+  document.getElementById('modal-date').textContent =
+    date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const container = document.getElementById('modal-events');
+  container.innerHTML = '';
+
+  if (!dayEvs.length) {
+    container.innerHTML = `<div class="modal-empty">Nothing planned for this day 🌿</div>`;
+  } else {
+    dayEvs.forEach(ev => {
+      const col   = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
+      const bgCls = ev.cal === 'p1' ? 'event-p1' : ev.cal === 'p2' ? 'event-p2' : 'event-shared';
+      const div = document.createElement('div');
+      div.className = `modal-event ${bgCls}`;
+      div.innerHTML = `
+        <div class="event-dot" style="background:${col};width:10px;height:10px;border-radius:50%;flex-shrink:0;"></div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;color:var(--text);">${ev.title}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">${ev.time}</div>
+        </div>`;
+      container.appendChild(div);
+    });
+  }
+
+  document.getElementById('day-modal').classList.add('open');
+}
+
+function closeDayModal(e) {
+  if (!e || e.target === document.getElementById('day-modal')) {
+    document.getElementById('day-modal').classList.remove('open');
+  }
+}
+
+// ── EVENTS LIST ───────────────────────────────────────────────────────────────
+let eventFilterDays = 1;
+
+function setEventFilter(days) {
+  eventFilterDays = days;
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === days + ' day' || btn.textContent.trim() === days + ' days');
+  });
+  renderEvents();
+}
+
+function renderEvents() {
+  const list = document.getElementById('event-list');
+  const reconnectBtn = document.getElementById('cal-refresh-btn');
+  list.innerHTML = '';
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() + eventFilterDays);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+  const upcoming = EVENTS
+    .filter(e => e.date >= TODAY && e.date <= cutoffStr)
+    .sort((a,b) => a.date.localeCompare(b.date));
+
+  if (!upcoming.length && !EVENTS.length) {
+    list.innerHTML = `<div class="empty-state">No upcoming events — <a href="#" onclick="reconnectCalendar();return false;" style="color:var(--accent);text-decoration:underline;">sync your Google Calendar</a> to see them here.</div>`;
+    if (reconnectBtn) reconnectBtn.style.display = 'inline-flex';
+    return;
+  }
+  if (!upcoming.length) {
+    list.innerHTML = `<div class="empty-state">No events in the next ${eventFilterDays} day${eventFilterDays > 1 ? 's' : ''} 🌿</div>`;
+    if (reconnectBtn) reconnectBtn.style.display = 'none';
+    return;
+  }
+  if (reconnectBtn) reconnectBtn.style.display = 'none';
+  upcoming.forEach(ev => {
+    const d = daysUntil(ev.date);
+    const col   = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
+    const bgCls = ev.cal === 'p1' ? 'event-p1' : ev.cal === 'p2' ? 'event-p2' : 'event-shared';
+    const div = document.createElement('div');
+    div.className = `event-item ${bgCls}`;
+    div.innerHTML = `
+      <div class="event-dot" style="background:${col}"></div>
+      <div style="flex:1">
+        <div class="event-title">${ev.title}</div>
+        <div class="event-sub">${fmtDate(ev.date)} · ${ev.time}</div>
+      </div>
+      <div class="event-when">${d===0?'Today':d===1?'Tomorrow':'in '+d+'d'}</div>`;
+    list.appendChild(div);
+  });
+}
+
+// ── FITNESS ───────────────────────────────────────────────────────────────────
+const FITNESS_OAUTH = {
+  strava:    { name: 'Strava',     url: 'https://www.strava.com/oauth/authorize?client_id=YOUR_STRAVA_CLIENT_ID&response_type=code&scope=activity:read_all' },
+  garmin:    { name: 'Garmin',     url: 'https://connect.garmin.com/oauthConfirm' },
+  googlefit: { name: 'Google Fit', url: 'https://accounts.google.com/o/oauth2/v2/auth?scope=https://www.googleapis.com/auth/fitness.activity.read&response_type=code&client_id=YOUR_GOOGLE_FIT_CLIENT_ID' },
+  fitbit:    { name: 'Fitbit',     url: 'https://www.fitbit.com/oauth2/authorize?response_type=code&client_id=YOUR_FITBIT_CLIENT_ID&scope=activity' },
+};
+
+function showFitnessOptions(slot) {
+  document.getElementById(`fitness-${slot}-body`).style.display = 'none';
+  document.getElementById(`fitness-${slot}-options`).style.display = 'flex';
+  document.getElementById(`fitness-${slot}-btn`).style.display = 'none';
+}
+
+function hideFitnessOptions(slot) {
+  document.getElementById(`fitness-${slot}-body`).style.display = '';
+  document.getElementById(`fitness-${slot}-options`).style.display = 'none';
+  document.getElementById(`fitness-${slot}-btn`).style.display = '';
+}
+
+function connectFitnessApp(slot, app) {
+  const appInfo = FITNESS_OAUTH[app];
+  // Show instructions modal since full OAuth needs API keys set up
+  const body = document.getElementById(`fitness-${slot}-body`);
+  body.style.display = '';
+  document.getElementById(`fitness-${slot}-options`).style.display = 'none';
+  document.getElementById(`fitness-${slot}-btn`).style.display = '';
+  body.innerHTML = `
+    <div class="tip-box" style="font-size:12px;line-height:1.7;">
+      <strong>To connect ${appInfo.name}:</strong><br>
+      ${app === 'strava' ? '1. Go to <a href="https://www.strava.com/settings/api" target="_blank" style="color:var(--accent);">strava.com/settings/api</a><br>2. Create an app and get your Client ID<br>3. Let us know and we\'ll wire it up!' : ''}
+      ${app === 'garmin' ? '1. Go to <a href="https://developer.garmin.com" target="_blank" style="color:var(--accent);">developer.garmin.com</a><br>2. Create a developer account<br>3. Register an app to get API credentials' : ''}
+      ${app === 'googlefit' ? '1. Enable Fitness API in your Google Cloud Console<br>2. Add fitness scopes to your OAuth credentials<br>3. We can add this alongside the calendar!' : ''}
+      ${app === 'fitbit' ? '1. Go to <a href="https://dev.fitbit.com" target="_blank" style="color:var(--accent);">dev.fitbit.com</a><br>2. Register an app and get your Client ID<br>3. Let us know and we\'ll wire it up!' : ''}
+    </div>`;
+}
+
+// ── BINS ──────────────────────────────────────────────────────────────────────
+
+function nextTuesdayDate(weeksAhead) {
+  const d = new Date();
+  const day = d.getDay();
+  const daysUntilTue = (2 - day + 7) % 7 || 7;
+  d.setDate(d.getDate() + daysUntilTue + weeksAhead * 7);
+  return d.toISOString().slice(0, 10);
+}
+
+function calcBins() {
+  const ANCHOR     = new Date('2026-07-01');
+  const today      = new Date();
+  const day        = today.getDay();
+  const daysToTue  = (2 - day + 7) % 7 || 7;
+  const nextTue    = new Date(today);
+  nextTue.setDate(today.getDate() + daysToTue);
+  const weeksDiff  = Math.round((nextTue - ANCHOR) / (7 * 86400000));
+  const startIndex = ((weeksDiff % 3) + 3) % 3;
+  return BIN_ROTATION.map((_, i) => ({
+    ...BIN_ROTATION[(startIndex + i) % 3],
+    next: nextTuesdayDate(i),
+  }));
+}
+
+function renderBins() {
+  const bins = calcBins();
+  const list = document.getElementById('bin-list');
+  list.innerHTML = '';
+
+  bins.forEach((bin, i) => {
+    const d = daysUntil(bin.next);
+    const urgent = d <= 1;
+    const isToday = d === 0;
+    const checkedKey = `bin-done-${bin.next}`;
+    const isDone = localStorage.getItem(checkedKey) === 'true';
+
+    const div = document.createElement('div');
+    div.className = 'bin-item' + (urgent && !isDone ? ' urgent' : '');
+    div.style.opacity = isDone ? '0.5' : '1';
+
+    const dayClass = d<=1?'red':d<=3?'orange':'grey';
+    const dayLabel = d===0?'TODAY':d===1?'TOMORROW':`${d} days`;
+
+    div.innerHTML = `
+      <div class="bin-icon">${bin.icon}</div>
+      <div style="flex:1">
+        <div class="bin-name" style="${urgent&&!isDone?'color:var(--danger);':''}">${bin.type}</div>
+        <div class="bin-date">Tuesday ${fmtDate(bin.next)}</div>
+      </div>
+      ${isToday ? `
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);">
+          <input type="checkbox" class="bin-check" ${isDone?'checked':''} onchange="toggleBinDone('${bin.next}', this.checked)" />
+          ${isDone ? '<span style="color:var(--good);font-weight:600;">Done ✓</span>' : 'Put out'}
+        </label>
+      ` : `<div class="bin-days ${dayClass}">${dayLabel}</div>`}`;
+    list.appendChild(div);
+  });
+}
+
+function toggleBinDone(dateStr, done) {
+  localStorage.setItem(`bin-done-${dateStr}`, done ? 'true' : 'false');
+  renderBins();
+}
+
+async function requestBinNotifications() {
+  if (!('Notification' in window)) {
+    alert('Your browser does not support notifications.');
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    scheduleBinNotifications();
+    updateNotifBtn();
+    return;
+  }
+  const permission = await Notification.requestPermission();
+  if (permission === 'granted') {
+    scheduleBinNotifications();
+  }
+  updateNotifBtn();
+}
+
+function updateNotifBtn() {
+  const btn = document.getElementById('notif-btn');
+  if (!btn) return;
+  if (Notification.permission === 'granted') {
+    btn.textContent = '🔔 Reminders on';
+    btn.style.color = 'var(--good)';
+    btn.style.borderColor = 'rgba(16,185,129,0.3)';
+    btn.style.background = 'rgba(16,185,129,0.1)';
+  } else if (Notification.permission === 'denied') {
+    btn.textContent = '🔕 Blocked';
+    btn.style.color = 'var(--danger)';
+    btn.style.borderColor = 'rgba(239,68,68,0.3)';
+    btn.style.background = 'rgba(239,68,68,0.1)';
+  } else {
+    btn.textContent = '🔔 Enable reminders';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+    btn.style.background = '';
+  }
+}
+
+function scheduleBinNotifications() {
+  const bins = calcBins();
+  bins.forEach(bin => {
+    const d = daysUntil(bin.next);
+    if (d === 0) {
+      const checkedKey = `bin-done-${bin.next}`;
+      if (localStorage.getItem(checkedKey) !== 'true') {
+        // Use service worker notification if available (works when app is closed)
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification('🗑️ Bin day!', {
+              body: `Don't forget to put out the ${bin.type} today`,
+              icon: '/LifeSync/icon-192.png',
+              badge: '/LifeSync/icon-192.png',
+              tag: `bin-${bin.next}`,
+              requireInteraction: true,
+              actions: [
+                { action: 'done', title: '✓ Done' },
+                { action: 'dismiss', title: 'Dismiss' }
+              ]
+            });
+          });
+        } else {
+          // Fallback to basic notification
+          new Notification('🗑️ Bin day!', {
+            body: `Don't forget to put out the ${bin.type} today`,
+            icon: '/LifeSync/icon-192.png',
+            tag: `bin-${bin.next}`,
+            requireInteraction: true,
+          });
+        }
+      }
+    }
+  });
+}
+
+// ── TASKS ─────────────────────────────────────────────────────────────────────
+function saveTasks() {
+  const obj = {};
+  TASKS.forEach(t => { obj['t' + t.id] = t; });
+  db.ref('tasks').set(obj);
+}
+
+function renderTasks() {
+  const list = document.getElementById('task-list');
+  list.innerHTML = '';
+  const open = TASKS.filter(t => !t.done);
+  const done = TASKS.filter(t => t.done);
+  document.getElementById('task-count').textContent = open.length + ' open';
+  if (!open.length && !done.length) {
+    list.innerHTML = `<div class="empty-state">No tasks yet — add one above.</div>`;
+    return;
+  }
+  [...open, ...done].forEach((t, i, arr) => {
+    if (t.done && i > 0 && !arr[i-1].done) {
+      const div = document.createElement('div');
+      div.className = 'divider';
+      list.appendChild(div);
+    }
+    const row = document.createElement('div');
+    row.className = 'task-item';
+    row.style.opacity = t.done ? '0.45' : '1';
+    row.innerHTML = `
+      <input type="checkbox" class="task-cb" ${t.done?'checked':''} onchange="toggleTask(${t.id})" />
+      <div class="task-text ${t.done?'done':''}">${t.text}</div>
+      <div class="task-tag tag-${t.priority}">${t.priority}</div>`;
+    list.appendChild(row);
+  });
+}
+function toggleTask(id) {
+  TASKS = TASKS.map(t => t.id===id ? {...t, done:!t.done} : t);
+  saveTasks();
+}
+function addTask() {
+  const inp = document.getElementById('task-input');
+  const pri = document.getElementById('task-priority').value;
+  if (!inp.value.trim()) return;
+  const newTask = { id: Date.now(), text: inp.value.trim(), done: false, priority: pri };
+  db.ref('tasks/t' + newTask.id).set(newTask);
+  inp.value = '';
+}
+
+// ── LINKS ─────────────────────────────────────────────────────────────────────
+function saveLinks() {
+  const obj = {};
+  LINKS.forEach((l, i) => { obj['l' + i] = l; });
+  db.ref('links').set(obj);
+}
+
+function renderLinks() {
+  const grid = document.getElementById('links-grid');
+  grid.innerHTML = '';
+  if (!LINKS.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:span 2;">No links yet — add your first one above.</div>`;
+    return;
+  }
+  LINKS.forEach(l => {
+    const a = document.createElement('a');
+    a.href = l.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.className = 'link-item';
+    a.innerHTML = `<span class="link-icon">${l.icon}</span>${l.label}`;
+    grid.appendChild(a);
+  });
+}
+function toggleAddLink() {
+  const form = document.getElementById('add-link-form');
+  form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+}
+function addLink() {
+  const label = document.getElementById('link-label').value.trim();
+  const url   = document.getElementById('link-url').value.trim();
+  if (!label || !url) return;
+  const newLink = { label, url, icon:'🌐' };
+  db.ref('links/l' + Date.now()).set(newLink);
+  document.getElementById('link-label').value = '';
+  document.getElementById('link-url').value = '';
+  document.getElementById('add-link-form').style.display = 'none';
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function daysUntil(ds) {
+  const t = new Date(TODAY), d = new Date(ds);
+  return Math.ceil((d - t) / 86400000);
+}
+function fmtDate(ds) {
+  return new Date(ds).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "LifeSync",
+  "short_name": "LifeSync",
+  "description": "Your shared home dashboard",
+  "start_url": "/LifeSync/",
+  "scope": "/LifeSync/",
+  "display": "standalone",
+  "background_color": "#e8f4fd",
+  "theme_color": "#3B82F6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/LifeSync/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/LifeSync/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
