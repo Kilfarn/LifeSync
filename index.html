@@ -1093,22 +1093,20 @@ function openDayModal(ds) {
     dayEvs.forEach(ev => {
       const col   = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
       const bgCls = ev.cal === 'p1' ? 'event-p1' : ev.cal === 'p2' ? 'event-p2' : 'event-shared';
-      const el = ev.link ? document.createElement('a') : document.createElement('div');
+      const el = document.createElement('a');
       el.className = `modal-event ${bgCls}`;
-      if (ev.link) {
-        el.href = ev.link;
-        el.target = '_blank';
-        el.rel = 'noopener noreferrer';
-        el.style.textDecoration = 'none';
-        el.style.cursor = 'pointer';
-      }
+      el.href = gcalEventLink(ev);
+      el.target = '_blank';
+      el.rel = 'noopener noreferrer';
+      el.style.textDecoration = 'none';
+      el.style.cursor = 'pointer';
       el.innerHTML = `
         <div class="event-dot" style="background:${col};width:10px;height:10px;border-radius:50%;flex-shrink:0;"></div>
         <div style="flex:1">
           <div style="font-size:14px;font-weight:600;color:var(--text);">${ev.title}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px;">${ev.time}</div>
         </div>
-        ${ev.link ? '<div style="font-size:16px;color:var(--muted);flex-shrink:0;">↗</div>' : ''}`;
+        <div style="font-size:16px;color:var(--muted);flex-shrink:0;">↗</div>`;
       container.appendChild(el);
     });
   }
@@ -1170,15 +1168,13 @@ function renderEvents() {
     const d = daysUntil(ev.date);
     const col   = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
     const bgCls = ev.cal === 'p1' ? 'event-p1' : ev.cal === 'p2' ? 'event-p2' : 'event-shared';
-    const el = ev.link ? document.createElement('a') : document.createElement('div');
+    const el = document.createElement('a');
     el.className = `event-item ${bgCls}`;
-    if (ev.link) {
-      el.href = ev.link;
-      el.target = '_blank';
-      el.rel = 'noopener noreferrer';
-      el.style.textDecoration = 'none';
-      el.style.cursor = 'pointer';
-    }
+    el.href = gcalEventLink(ev);
+    el.target = '_blank';
+    el.rel = 'noopener noreferrer';
+    el.style.textDecoration = 'none';
+    el.style.cursor = 'pointer';
     el.innerHTML = `
       <div class="event-dot" style="background:${col}"></div>
       <div style="flex:1">
@@ -1450,6 +1446,12 @@ function addLink() {
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
+function gcalEventLink(ev) {
+  if (ev.link) return ev.link;
+  // Fallback: open Google Calendar on the event's day
+  const d = new Date(ev.date + 'T00:00:00');
+  return `https://calendar.google.com/calendar/r/day/${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+}
 function daysUntil(ds) {
   const t = new Date(TODAY), d = new Date(ds);
   return Math.ceil((d - t) / 86400000);
