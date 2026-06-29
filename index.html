@@ -8,6 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
   :root {
     --bg-from:     #e8f4fd;
@@ -546,9 +549,12 @@
 
     <!-- Shared Notes -->
     <div class="card">
-      <div class="card-title">📝 Shared Notes</div>
+      <div class="sb">
+        <div class="card-title">📝 Shared Notes</div>
+        <span id="notes-status" style="font-size:11px;color:var(--good);"></span>
+      </div>
       <textarea class="input notes-ta" id="notes-ta" placeholder="Jot down anything for both of you…"></textarea>
-      <div style="font-size:11px;color:var(--muted);">Saved in your browser</div>
+      <div style="font-size:11px;color:var(--muted);">✓ Synced with your partner in real time</div>
     </div>
 
     <!-- Quick Links -->
@@ -584,25 +590,37 @@
 </div>
 
 <script>
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyCsu27r3D_iuGvYpymUYJdwWVasWEt5EM0",
+  authDomain:        "lifesync-b8d8c.firebaseapp.com",
+  databaseURL:       "https://lifesync-b8d8c-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "lifesync-b8d8c",
+  storageBucket:     "lifesync-b8d8c.firebasestorage.app",
+  messagingSenderId: "723047637954",
+  appId:             "1:723047637954:web:aa78f1606c60410cde6c5b",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const CLIENT_ID   = '149756037546-g9526tagfjpem4dc0cmqlnkiksvffdli.apps.googleusercontent.com';
-const SCOPES      = 'https://www.googleapis.com/auth/calendar.readonly';
-const TODAY       = new Date().toISOString().slice(0, 10);
+const CLIENT_ID = '149756037546-g9526tagfjpem4dc0cmqlnkiksvffdli.apps.googleusercontent.com';
+const SCOPES    = 'https://www.googleapis.com/auth/calendar.readonly';
+const TODAY     = new Date().toISOString().slice(0, 10);
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let currentUser   = null;
-let EVENTS        = [];
-let TASKS         = JSON.parse(localStorage.getItem('lifesync-tasks') || '[]');
-let LINKS         = JSON.parse(localStorage.getItem('lifesync-links') || '[]');
-let calViewDate   = new Date();
+let currentUser = null;
+let EVENTS      = [];
+let calViewDate = new Date();
+let notesTimeout = null;
 
 const BIN_ROTATION = [
   { type:'General Waste', icon:'🗑️' },
   { type:'Recycling',     icon:'♻️' },
 ];
 
-// Known users — maps email → colour slot (p1 or p2)
-let knownUsers    = JSON.parse(localStorage.getItem('lifesync-users') || '{}');
+// Known users — maps email → colour slot (p1 or p2), stored in Firebase
+let knownUsers = {};
 
 function signIn() {
   // Single OAuth redirect requesting profile + calendar in one go
@@ -653,34 +671,39 @@ async function fetchUserInfo(accessToken) {
 }
 
 function onSignedIn(user, restoredSession) {
-  // Assign colour slot — first person = p1, second = p2
-  if (!knownUsers[user.email]) {
-    const slot = Object.keys(knownUsers).length === 0 ? 'p1' : 'p2';
-    knownUsers[user.email] = slot;
-    localStorage.setItem('lifesync-users', JSON.stringify(knownUsers));
-  }
-  user.slot = knownUsers[user.email];
-  currentUser = user;
+  // Look up or register user slot in Firebase
+  const usersRef = db.ref('users');
+  usersRef.once('value', snapshot => {
+    const users = snapshot.val() || {};
+    knownUsers = users;
 
-  // Save session (without access token — it expires anyway)
-  localStorage.setItem('lifesync-session', JSON.stringify({
-    name: user.name, email: user.email, picture: user.picture, slot: user.slot
-  }));
+    if (!users[btoa(user.email)]) {
+      // New user — assign slot based on how many users exist
+      const slot = Object.keys(users).length === 0 ? 'p1' : 'p2';
+      users[btoa(user.email)] = { slot, name: user.name, email: user.email, picture: user.picture || '' };
+      db.ref('users/' + btoa(user.email)).set(users[btoa(user.email)]);
+      knownUsers = users;
+    }
 
-  document.getElementById('signin-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
+    user.slot = users[btoa(user.email)].slot;
+    currentUser = user;
 
-  initApp();
+    // Save session locally (no access token — expires anyway)
+    localStorage.setItem('lifesync-session', JSON.stringify({
+      name: user.name, email: user.email, picture: user.picture, slot: user.slot
+    }));
 
-  // If we have a fresh access token, load calendar; otherwise prompt silently for one
-  if (user.accessToken) {
-    loadCalendarEvents();
-  } else if (!restoredSession) {
-    loadCalendarEvents();
-  } else {
-    // Restored session — silently get a new access token in the background
-    refreshCalendarToken();
-  }
+    document.getElementById('signin-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+    initApp();
+
+    if (user.accessToken) {
+      loadCalendarEvents();
+    } else if (restoredSession) {
+      refreshCalendarToken();
+    }
+  });
 }
 
 function refreshCalendarToken() {
@@ -730,7 +753,6 @@ function showSigninError(msg) {
 
 // ── INIT APP ──────────────────────────────────────────────────────────────────
 function initApp() {
-  // Greeting
   const h = new Date().getHours();
   const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   document.getElementById('greeting').textContent = `— ${greet} 👋`;
@@ -746,35 +768,76 @@ function initApp() {
     ? `<img class="user-avatar" src="${currentUser.picture}" referrerpolicy="no-referrer" /> ${currentUser.name.split(' ')[0]}`
     : `<div class="user-avatar-placeholder" style="background:${color}">${initial}</div> ${currentUser.name.split(' ')[0]}`;
 
-  // Fitness card titles
-  document.getElementById('fitness-p1-title').innerHTML = `🏃 Fitness · <span style="color:var(--p1);">${currentUser.slot === 'p1' ? currentUser.name.split(' ')[0] : 'Partner 1'}</span>`;
-  document.getElementById('fitness-p2-title').innerHTML = `🏃 Fitness · <span style="color:var(--p2);">${currentUser.slot === 'p2' ? currentUser.name.split(' ')[0] : 'Partner 2'}</span>`;
+  // Listen for all users to populate partner info dynamically
+  db.ref('users').on('value', snapshot => {
+    knownUsers = snapshot.val() || {};
+    updatePartnerDisplay(knownUsers);
+  });
 
-  // Calendar legend
-  const legend = document.getElementById('cal-legend');
-  legend.innerHTML = `
-    <span class="pill pill-p1">${currentUser.slot === 'p1' ? currentUser.name.split(' ')[0] : 'Partner 1'}</span>
-    <span class="pill pill-p2">${currentUser.slot === 'p2' ? currentUser.name.split(' ')[0] : 'Partner 2'}</span>
-    <span class="pill pill-shared">Shared</span>`;
+  // ── Firebase real-time listeners ──────────────────────────
+  // Tasks
+  db.ref('tasks').on('value', snapshot => {
+    const data = snapshot.val();
+    TASKS = data ? Object.values(data) : [];
+    renderTasks();
+  });
+
+  // Links
+  db.ref('links').on('value', snapshot => {
+    const data = snapshot.val();
+    LINKS = data ? Object.values(data) : [];
+    renderLinks();
+  });
+
+  // Notes
+  db.ref('notes').on('value', snapshot => {
+    const ta = document.getElementById('notes-ta');
+    const val = snapshot.val() || '';
+    if (document.activeElement !== ta) ta.value = val;
+  });
+  document.getElementById('notes-ta').addEventListener('input', e => {
+    clearTimeout(notesTimeout);
+    notesTimeout = setTimeout(() => db.ref('notes').set(e.target.value), 800);
+  });
+
+  // Partner calendar events (both users write their events, both read all)
+  db.ref('calendar').on('value', snapshot => {
+    const data = snapshot.val() || {};
+    EVENTS = Object.values(data).flat();
+    renderEvents();
+    renderMonthCal();
+  });
+
+  document.getElementById('task-input').addEventListener('keydown', e => { if(e.key==='Enter') addTask(); });
 
   renderMonthCal();
   renderEvents();
   renderBins();
-  renderTasks();
-  renderLinks();
   loadWeather();
 
-  // Re-fire bin notifications if already granted
   if (Notification.permission === 'granted') scheduleBinNotifications();
   updateNotifBtn();
+}
 
-  // Notes
-  const ta = document.getElementById('notes-ta');
-  const saved = localStorage.getItem('lifesync-notes');
-  if (saved) ta.value = saved;
-  ta.addEventListener('input', () => localStorage.setItem('lifesync-notes', ta.value));
+function updatePartnerDisplay(users) {
+  const entries     = Object.values(users);
+  const me          = entries.find(u => u.email === currentUser.email);
+  const partner     = entries.find(u => u.email !== currentUser.email);
+  const myName      = me?.name?.split(' ')[0]      || 'You';
+  const partnerName = partner?.name?.split(' ')[0] || 'Partner';
+  const mySlot      = me?.slot      || currentUser.slot;
+  const partnerSlot = partner?.slot || (mySlot === 'p1' ? 'p2' : 'p1');
 
-  document.getElementById('task-input').addEventListener('keydown', e => { if(e.key==='Enter') addTask(); });
+  document.getElementById(`fitness-${mySlot}-title`).innerHTML =
+    `🏃 Fitness · <span style="color:var(--${mySlot});">${myName}</span>`;
+  document.getElementById(`fitness-${partnerSlot}-title`).innerHTML =
+    `🏃 Fitness · <span style="color:var(--${partnerSlot});">${partnerName}</span>`;
+
+  document.getElementById('cal-legend').innerHTML = `
+    <span class="pill pill-p1">${mySlot === 'p1' ? myName : partnerName}</span>
+    <span class="pill pill-p2">${mySlot === 'p2' ? myName : partnerName}</span>
+    <span class="pill pill-shared">Shared</span>`;
+}
 }
 
 // ── GOOGLE CALENDAR ───────────────────────────────────────────────────────────
@@ -818,6 +881,9 @@ async function loadCalendarEvents() {
       time:  item.start.dateTime ? new Date(item.start.dateTime).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) : 'All day',
       cal:   currentUser.slot,
     }));
+
+    // Write this user's events to Firebase so partner sees them
+    db.ref('calendar/' + currentUser.slot).set(EVENTS);
 
     status.innerHTML = `<span style="color:var(--good)">✓ Synced</span>`;
     if (reconnectBtn) reconnectBtn.style.display = 'none';
@@ -1205,7 +1271,11 @@ function scheduleBinNotifications() {
 }
 
 // ── TASKS ─────────────────────────────────────────────────────────────────────
-function saveTasks() { localStorage.setItem('lifesync-tasks', JSON.stringify(TASKS)); }
+function saveTasks() {
+  const obj = {};
+  TASKS.forEach(t => { obj['t' + t.id] = t; });
+  db.ref('tasks').set(obj);
+}
 
 function renderTasks() {
   const list = document.getElementById('task-list');
@@ -1235,19 +1305,23 @@ function renderTasks() {
 }
 function toggleTask(id) {
   TASKS = TASKS.map(t => t.id===id ? {...t, done:!t.done} : t);
-  saveTasks(); renderTasks();
+  saveTasks();
 }
 function addTask() {
   const inp = document.getElementById('task-input');
   const pri = document.getElementById('task-priority').value;
   if (!inp.value.trim()) return;
-  TASKS.unshift({ id: Date.now(), text: inp.value.trim(), done: false, priority: pri });
+  const newTask = { id: Date.now(), text: inp.value.trim(), done: false, priority: pri };
+  db.ref('tasks/t' + newTask.id).set(newTask);
   inp.value = '';
-  saveTasks(); renderTasks();
 }
 
 // ── LINKS ─────────────────────────────────────────────────────────────────────
-function saveLinks() { localStorage.setItem('lifesync-links', JSON.stringify(LINKS)); }
+function saveLinks() {
+  const obj = {};
+  LINKS.forEach((l, i) => { obj['l' + i] = l; });
+  db.ref('links').set(obj);
+}
 
 function renderLinks() {
   const grid = document.getElementById('links-grid');
@@ -1272,11 +1346,11 @@ function addLink() {
   const label = document.getElementById('link-label').value.trim();
   const url   = document.getElementById('link-url').value.trim();
   if (!label || !url) return;
-  LINKS.push({ label, url, icon:'🌐' });
+  const newLink = { label, url, icon:'🌐' };
+  db.ref('links/l' + Date.now()).set(newLink);
   document.getElementById('link-label').value = '';
   document.getElementById('link-url').value = '';
   document.getElementById('add-link-form').style.display = 'none';
-  saveLinks(); renderLinks();
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
