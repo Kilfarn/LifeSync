@@ -676,8 +676,9 @@ function signIn() {
   // 2. Restore saved session if available
   const saved = localStorage.getItem('lifesync-session');
   if (saved) {
+    // Hide sign-in immediately to avoid flash while Firebase confirms the session
+    document.getElementById('signin-screen').style.display = 'none';
     const user = JSON.parse(saved);
-    // Access tokens expire after 1 hour — restore profile but re-fetch calendar silently
     onSignedIn(user, true);
   }
 })();
