@@ -1093,12 +1093,8 @@ function openDayModal(ds) {
     dayEvs.forEach(ev => {
       const col   = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
       const bgCls = ev.cal === 'p1' ? 'event-p1' : ev.cal === 'p2' ? 'event-p2' : 'event-shared';
-      const el = document.createElement('a');
+      const el = document.createElement('div');
       el.className = `modal-event ${bgCls}`;
-      el.href = gcalEventLink(ev);
-      el.target = '_blank';
-      el.rel = 'noopener noreferrer';
-      el.style.textDecoration = 'none';
       el.style.cursor = 'pointer';
       el.innerHTML = `
         <div class="event-dot" style="background:${col};width:10px;height:10px;border-radius:50%;flex-shrink:0;"></div>
@@ -1107,6 +1103,10 @@ function openDayModal(ds) {
           <div style="font-size:12px;color:var(--muted);margin-top:2px;">${ev.time}</div>
         </div>
         <div style="font-size:16px;color:var(--muted);flex-shrink:0;">↗</div>`;
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.open(gcalEventLink(ev), '_blank', 'noopener,noreferrer');
+      });
       container.appendChild(el);
     });
   }
@@ -1168,12 +1168,8 @@ function renderEvents() {
     const d = daysUntil(ev.date);
     const col   = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
     const bgCls = ev.cal === 'p1' ? 'event-p1' : ev.cal === 'p2' ? 'event-p2' : 'event-shared';
-    const el = document.createElement('a');
+    const el = document.createElement('div');
     el.className = `event-item ${bgCls}`;
-    el.href = gcalEventLink(ev);
-    el.target = '_blank';
-    el.rel = 'noopener noreferrer';
-    el.style.textDecoration = 'none';
     el.style.cursor = 'pointer';
     el.innerHTML = `
       <div class="event-dot" style="background:${col}"></div>
@@ -1182,6 +1178,9 @@ function renderEvents() {
         <div class="event-sub">${fmtDate(ev.date)} · ${ev.time}</div>
       </div>
       <div class="event-when">${d===0?'Today':d===1?'Tomorrow':'in '+d+'d'}</div>`;
+    el.addEventListener('click', () => {
+      window.open(gcalEventLink(ev), '_blank', 'noopener,noreferrer');
+    });
     list.appendChild(el);
   });
 }
