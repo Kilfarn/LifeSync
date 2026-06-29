@@ -937,11 +937,13 @@ async function loadCalendarEvents() {
   status.innerHTML = `<span class="spinning">↻</span> Syncing…`;
 
   try {
-    const now    = new Date().toISOString();
-    const future = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const future = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
     const url    = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
-      `timeMin=${encodeURIComponent(now)}&timeMax=${encodeURIComponent(future)}` +
-      `&singleEvents=true&orderBy=startTime&maxResults=20`;
+      `timeMin=${encodeURIComponent(monthStart.toISOString())}&timeMax=${encodeURIComponent(future)}` +
+      `&singleEvents=true&orderBy=startTime&maxResults=50`;
 
     const r    = await fetch(url, { headers: { Authorization: `Bearer ${currentUser.accessToken}` } });
     const data = await r.json();
