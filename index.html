@@ -843,13 +843,16 @@ function changeMonth(dir) {
 // ── EVENTS LIST ───────────────────────────────────────────────────────────────
 function renderEvents() {
   const list = document.getElementById('event-list');
+  const reconnectBtn = document.getElementById('cal-refresh-btn');
   list.innerHTML = '';
   const upcoming = EVENTS.filter(e => e.date >= TODAY)
     .sort((a,b) => a.date.localeCompare(b.date)).slice(0, 8);
   if (!upcoming.length) {
-    list.innerHTML = `<div class="empty-state">No upcoming events — your calendar will appear here once synced.</div>`;
+    list.innerHTML = `<div class="empty-state">No upcoming events — <a href="#" onclick="reconnectCalendar();return false;" style="color:var(--accent);text-decoration:underline;">sync your Google Calendar</a> to see them here.</div>`;
+    if (reconnectBtn) reconnectBtn.style.display = 'inline-flex';
     return;
   }
+  if (reconnectBtn) reconnectBtn.style.display = 'none';
   upcoming.forEach(ev => {
     const d = daysUntil(ev.date);
     const col   = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
