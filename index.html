@@ -633,10 +633,11 @@ const SCOPES    = 'https://www.googleapis.com/auth/calendar.readonly';
 const TODAY     = new Date().toISOString().slice(0, 10);
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let currentUser = null;
-let EVENTS      = [];
-let calViewDate = new Date();
-let notesTimeout = null;
+let currentUser    = null;
+let EVENTS         = [];
+let calViewDate    = new Date();
+let notesTimeout   = null;
+let currentModalDay = null;
 
 const BIN_ROTATION = [
   { type:'General Waste', icon:'🗑️' },
@@ -830,6 +831,7 @@ function initApp() {
     EVENTS = Object.values(data).flat();
     renderEvents();
     renderMonthCal();
+    if (currentModalDay) refreshDayModal(currentModalDay);
   });
 
   document.getElementById('task-input').addEventListener('keydown', e => { if(e.key==='Enter') addTask(); });
@@ -942,6 +944,7 @@ async function loadCalendarEvents() {
     if (reconnectBtn) reconnectBtn.style.display = 'none';
     renderEvents();
     renderMonthCal();
+    if (currentModalDay) refreshDayModal(currentModalDay);
 
   } catch(e) {
     status.innerHTML = `<span style="color:var(--danger)">⚠ ${e.message}</span>`;
@@ -1083,16 +1086,8 @@ function changeMonth(dir) {
   renderMonthCal();
 }
 
-function openDayModal(ds) {
+function renderDayModalContent(ds) {
   const dayEvs  = EVENTS.filter(e => e.date === ds);
-  const date    = new Date(ds + 'T00:00:00');
-  const isToday = ds === TODAY;
-
-  document.getElementById('modal-title').textContent =
-    isToday ? 'Today' : date.toLocaleDateString('en-GB', { weekday: 'long' });
-  document.getElementById('modal-date').textContent =
-    date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-
   const container = document.getElementById('modal-events');
   container.innerHTML = '';
 
@@ -1119,6 +1114,23 @@ function openDayModal(ds) {
       container.appendChild(el);
     });
   }
+}
+
+function refreshDayModal(ds) {
+  renderDayModalContent(ds);
+}
+
+function openDayModal(ds) {
+  currentModalDay = ds;
+  const date    = new Date(ds + 'T00:00:00');
+  const isToday = ds === TODAY;
+
+  document.getElementById('modal-title').textContent =
+    isToday ? 'Today' : date.toLocaleDateString('en-GB', { weekday: 'long' });
+  document.getElementById('modal-date').textContent =
+    date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  renderDayModalContent(ds);
 
   // Update the Add to Google Calendar button with the correct date
   const dateFormatted = ds.replace(/-/g, '');
@@ -1134,6 +1146,7 @@ function openDayModal(ds) {
 
 function closeDayModal(e) {
   if (!e || e.target === document.getElementById('day-modal')) {
+    currentModalDay = null;
     document.getElementById('day-modal').classList.remove('open');
   }
 }
