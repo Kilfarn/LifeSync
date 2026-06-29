@@ -37,4 +37,4 @@ A GitHub Action also auto-bumps the cache on every push to `main` as a safety ne
 
 ## Development branch
 
-Always develop on: `claude/shared-life-dashboard-dkbxc1`
+Always develop on: `main`
