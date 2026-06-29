@@ -345,6 +345,8 @@
     border-radius: 20px;
     padding: 24px;
     width: 100%; max-width: 420px;
+    max-height: 80vh;
+    overflow-y: auto;
     box-shadow: 0 20px 60px rgba(59,100,180,0.2);
     transform: translateY(12px);
     transition: transform 0.2s;
@@ -1103,18 +1105,18 @@ function openDayModal(ds) {
   addBtn.rel = 'noopener noreferrer';
   addBtn.style.cssText = `
     display:flex;align-items:center;justify-content:center;gap:8px;
-    margin-top:4px;padding:10px 16px;border-radius:12px;
-    background:var(--accent-soft);border:1px solid rgba(59,130,246,0.3);
-    color:var(--accent);font-size:13px;font-weight:600;text-decoration:none;
-    transition:background 0.15s;`;
+    padding:12px 16px;border-radius:12px;
+    background:var(--accent);border:none;
+    color:#fff;font-size:13px;font-weight:600;text-decoration:none;`;
   addBtn.innerHTML = `<span style="font-size:16px;">📅</span> Add event to Google Calendar`;
   addBtn.addEventListener('click', () => {
-    // Sync calendar when user returns to the app
     setTimeout(() => {
       if (currentUser?.accessToken) loadCalendarEvents();
     }, 3000);
   });
-  container.appendChild(addBtn);
+
+  // Append button directly to modal, after modal-events
+  document.getElementById('modal-events').after(addBtn);
 
   document.getElementById('day-modal').classList.add('open');
 }
@@ -1122,6 +1124,9 @@ function openDayModal(ds) {
 function closeDayModal(e) {
   if (!e || e.target === document.getElementById('day-modal')) {
     document.getElementById('day-modal').classList.remove('open');
+    // Remove any lingering add-event buttons
+    const modal = document.querySelector('.modal');
+    modal.querySelectorAll('a[href*="calendar.google.com"]').forEach(el => el.remove());
   }
 }
 
