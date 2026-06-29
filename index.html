@@ -540,7 +540,7 @@
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;" id="bin-list"></div>
       <div class="tip-box muted">
-        💡 Collections every <strong style="color:var(--text);">Tuesday</strong> · rotating General Waste → Recycling → Garden Waste
+        💡 Collections every <strong style="color:var(--text);">Tuesday</strong> · alternating General Waste and Recycling
       </div>
     </div>
 
@@ -599,7 +599,6 @@ let calViewDate   = new Date();
 const BIN_ROTATION = [
   { type:'General Waste', icon:'🗑️' },
   { type:'Recycling',     icon:'♻️' },
-  { type:'Garden Waste',  icon:'🌿' },
 ];
 
 // Known users — maps email → colour slot (p1 or p2)
@@ -767,6 +766,7 @@ function initApp() {
 
   // Re-fire bin notifications if already granted
   if (Notification.permission === 'granted') scheduleBinNotifications();
+  updateNotifBtn();
 
   // Notes
   const ta = document.getElementById('notes-ta');
@@ -1110,14 +1110,7 @@ function calcBins() {
 function renderBins() {
   const bins = calcBins();
   const list = document.getElementById('bin-list');
-  const notifBtn = document.getElementById('notif-btn');
   list.innerHTML = '';
-
-  // Update notification button state
-  if (Notification.permission === 'granted') {
-    notifBtn.textContent = '🔔 Reminders on';
-    notifBtn.style.color = 'var(--good)';
-  }
 
   bins.forEach((bin, i) => {
     const d = daysUntil(bin.next);
@@ -1159,10 +1152,36 @@ async function requestBinNotifications() {
     alert('Your browser does not support notifications.');
     return;
   }
+  if (Notification.permission === 'granted') {
+    scheduleBinNotifications();
+    updateNotifBtn();
+    return;
+  }
   const permission = await Notification.requestPermission();
   if (permission === 'granted') {
     scheduleBinNotifications();
-    renderBins();
+  }
+  updateNotifBtn();
+}
+
+function updateNotifBtn() {
+  const btn = document.getElementById('notif-btn');
+  if (!btn) return;
+  if (Notification.permission === 'granted') {
+    btn.textContent = '🔔 Reminders on';
+    btn.style.color = 'var(--good)';
+    btn.style.borderColor = 'rgba(16,185,129,0.3)';
+    btn.style.background = 'rgba(16,185,129,0.1)';
+  } else if (Notification.permission === 'denied') {
+    btn.textContent = '🔕 Blocked';
+    btn.style.color = 'var(--danger)';
+    btn.style.borderColor = 'rgba(239,68,68,0.3)';
+    btn.style.background = 'rgba(239,68,68,0.1)';
+  } else {
+    btn.textContent = '🔔 Enable reminders';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+    btn.style.background = '';
   }
 }
 
