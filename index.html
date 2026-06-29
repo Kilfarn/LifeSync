@@ -311,6 +311,11 @@
   .tag-medium { background: rgba(245,158,11,0.1); color: var(--warn);   border-color: rgba(245,158,11,0.3); }
   .tag-low    { background: rgba(107,127,168,0.1);color: var(--muted);  border-color: rgba(107,127,168,0.3); }
   .task-add-row { display: flex; gap: 6px; }
+  .task-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-blue   { background: #3B82F6; }
+  .dot-pink   { background: #EC4899; }
+  .dot-green  { background: #22C55E; }
+  .dot-yellow { background: #EAB308; }
 
   /* ── Links ── */
   .links-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -490,10 +495,17 @@
       </div>
       <div class="task-add-row">
         <input class="input input-flex" id="task-input" placeholder="Add a task…" />
-        <select class="input" id="task-priority" style="width:72px;">
+        <select class="input" id="task-priority" style="width:68px;">
           <option value="high">High</option>
           <option value="medium" selected>Med</option>
           <option value="low">Low</option>
+        </select>
+        <select class="input" id="task-assign" style="width:88px;">
+          <option value="none">Who?</option>
+          <option value="blue">Matthew</option>
+          <option value="pink">Megan</option>
+          <option value="green">Together</option>
+          <option value="yellow">Open</option>
         </select>
         <button class="btn-add" onclick="addTask()">+</button>
       </div>
@@ -1439,8 +1451,10 @@ function renderTasks() {
     const row = document.createElement('div');
     row.className = 'task-item';
     row.style.opacity = t.done ? '0.45' : '1';
+    const dot = (t.assign && t.assign !== 'none') ? `<div class="task-dot dot-${t.assign}"></div>` : '';
     row.innerHTML = `
       <input type="checkbox" class="task-cb" ${t.done?'checked':''} onchange="toggleTask(${t.id})" />
+      ${dot}
       <div class="task-text ${t.done?'done':''}">${t.text}</div>
       <div class="task-tag tag-${t.priority}">${t.priority}</div>`;
     list.appendChild(row);
@@ -1451,12 +1465,14 @@ function toggleTask(id) {
   saveTasks();
 }
 function addTask() {
-  const inp = document.getElementById('task-input');
-  const pri = document.getElementById('task-priority').value;
+  const inp    = document.getElementById('task-input');
+  const pri    = document.getElementById('task-priority').value;
+  const assign = document.getElementById('task-assign').value;
   if (!inp.value.trim()) return;
-  const newTask = { id: Date.now(), text: inp.value.trim(), done: false, priority: pri };
+  const newTask = { id: Date.now(), text: inp.value.trim(), done: false, priority: pri, assign };
   db.ref('tasks/t' + newTask.id).set(newTask);
   inp.value = '';
+  document.getElementById('task-assign').value = 'none';
 }
 
 // ── LINKS ─────────────────────────────────────────────────────────────────────
