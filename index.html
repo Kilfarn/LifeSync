@@ -842,7 +842,7 @@ function initApp() {
   if (Notification.permission === 'granted') scheduleBinNotifications();
   updateNotifBtn();
 
-  // Auto-refresh calendar every 5 minutes while app is open
+  // Auto-refresh calendar every 5 minutes, weather every 15 minutes
   setInterval(() => {
     if (currentUser?.accessToken) {
       loadCalendarEvents();
@@ -850,8 +850,9 @@ function initApp() {
       reconnectCalendar();
     }
   }, 5 * 60 * 1000);
+  setInterval(loadWeather, 15 * 60 * 1000);
 
-  // Refresh calendar every time app comes into view
+  // Refresh calendar and weather every time app comes into view
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && currentUser) {
       if (currentUser.accessToken) {
@@ -859,6 +860,7 @@ function initApp() {
       } else {
         reconnectCalendar();
       }
+      loadWeather();
     }
   });
 
@@ -870,6 +872,7 @@ function initApp() {
       } else {
         reconnectCalendar();
       }
+      loadWeather();
     }
   });
 }
@@ -963,29 +966,40 @@ function reconnectCalendar() {
 }
 
 // ── WEATHER (Open-Meteo, no API key needed) ───────────────────────────────────
-async function loadWeather() {
-  document.getElementById('weather-desc').textContent = 'Locating…';
+function fetchWeatherForCoords(lat, lon, locationName) {
+  const icons = { 0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️', 45:'🌫️', 48:'🌫️', 51:'🌦️', 53:'🌦️', 55:'🌧️', 61:'🌧️', 63:'🌧️', 65:'🌧️', 71:'❄️', 73:'❄️', 75:'❄️', 80:'🌦️', 81:'🌧️', 82:'⛈️', 95:'⛈️' };
+  const descs = { 0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast', 45:'Foggy', 51:'Light drizzle', 61:'Light rain', 63:'Moderate rain', 65:'Heavy rain', 71:'Light snow', 80:'Rain showers', 95:'Thunderstorm' };
+  fetch(
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    `&current=temperature_2m,weathercode&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
+  )
+  .then(r => r.json())
+  .then(d => {
+    const code = d.current.weathercode;
+    document.getElementById('weather-icon').textContent = icons[code] || '🌡️';
+    document.getElementById('weather-temp').textContent = Math.round(d.current.temperature_2m) + '°C';
+    document.getElementById('weather-desc').textContent = descs[code] || 'Mixed conditions';
+    document.getElementById('weather-hilo').textContent = `H: ${Math.round(d.daily.temperature_2m_max[0])}° / L: ${Math.round(d.daily.temperature_2m_min[0])}°`;
+    document.getElementById('weather-location').textContent = 'Weather · ' + locationName;
+  })
+  .catch(() => {
+    document.getElementById('weather-desc').textContent = 'Unable to load';
+  });
+}
 
-  function fetchWeatherForCoords(lat, lon, locationName) {
-    fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-      `&current=temperature_2m,weathercode&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
-    )
-    .then(r => r.json())
-    .then(d => {
-      const code  = d.current.weathercode;
-      const icons = { 0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️', 45:'🌫️', 48:'🌫️', 51:'🌦️', 53:'🌦️', 55:'🌧️', 61:'🌧️', 63:'🌧️', 65:'🌧️', 71:'❄️', 73:'❄️', 75:'❄️', 80:'🌦️', 81:'🌧️', 82:'⛈️', 95:'⛈️' };
-      const descs = { 0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast', 45:'Foggy', 51:'Light drizzle', 61:'Light rain', 63:'Moderate rain', 65:'Heavy rain', 71:'Light snow', 80:'Rain showers', 95:'Thunderstorm' };
-      document.getElementById('weather-icon').textContent = icons[code] || '🌡️';
-      document.getElementById('weather-temp').textContent = Math.round(d.current.temperature_2m) + '°C';
-      document.getElementById('weather-desc').textContent = descs[code] || 'Mixed conditions';
-      document.getElementById('weather-hilo').textContent = `H: ${Math.round(d.daily.temperature_2m_max[0])}° / L: ${Math.round(d.daily.temperature_2m_min[0])}°`;
-      document.getElementById('weather-location').textContent = 'Weather · ' + locationName;
-    })
-    .catch(() => {
-      document.getElementById('weather-desc').textContent = 'Unable to load';
-    });
+async function loadWeather() {
+  // Use cached location for up to 1 hour — avoids slow geolocation on every refresh
+  const cached = localStorage.getItem('lifesync-loc');
+  if (cached) {
+    const loc = JSON.parse(cached);
+    if (Date.now() - loc.ts < 60 * 60 * 1000) {
+      fetchWeatherForCoords(loc.lat, loc.lon, loc.name);
+      return;
+    }
   }
+
+  // No cache or cache expired — run geolocation
+  document.getElementById('weather-desc').textContent = 'Locating…';
 
   async function reverseGeocode(lat, lon) {
     try {
@@ -1000,12 +1014,12 @@ async function loadWeather() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const locationName = await reverseGeocode(latitude, longitude);
-        fetchWeatherForCoords(latitude, longitude, locationName);
+        const { latitude: lat, longitude: lon } = pos.coords;
+        const name = await reverseGeocode(lat, lon);
+        localStorage.setItem('lifesync-loc', JSON.stringify({ lat, lon, name, ts: Date.now() }));
+        fetchWeatherForCoords(lat, lon, name);
       },
       () => {
-        // User denied or unavailable — fall back to London
         fetchWeatherForCoords(51.5, -0.12, 'London');
       },
       { timeout: 8000 }
