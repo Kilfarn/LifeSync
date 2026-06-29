@@ -877,7 +877,7 @@ function initApp() {
     if (currentUser?.accessToken) {
       loadCalendarEvents();
     } else {
-      reconnectCalendar();
+      refreshCalendarToken();
     }
   }, 5 * 60 * 1000);
   setInterval(loadWeather, 15 * 60 * 1000);
@@ -886,7 +886,7 @@ function initApp() {
   function refreshOnResume() {
     if (!currentUser) return;
     if (currentUser.accessToken) loadCalendarEvents();
-    else reconnectCalendar();
+    else refreshCalendarToken();
     loadWeather();
   }
 
