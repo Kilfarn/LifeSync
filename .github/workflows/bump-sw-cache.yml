@@ -15,13 +15,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if sw.js was already bumped in this commit
+        id: check
+        run: |
+          if git diff HEAD~1 HEAD --name-only 2>/dev/null | grep -q '^sw\.js$'; then
+            echo "already_bumped=true" >> $GITHUB_OUTPUT
+          else
+            echo "already_bumped=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Bump cache version in sw.js
+        if: steps.check.outputs.already_bumped == 'false'
         run: |
           VERSION="lifesync-$(date -u +%Y%m%d-%H%M%S)"
           sed -i "s/const CACHE_NAME = '[^']*'/const CACHE_NAME = '${VERSION}'/" sw.js
           echo "Cache version set to: ${VERSION}"
 
       - name: Commit updated sw.js
+        if: steps.check.outputs.already_bumped == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

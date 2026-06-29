@@ -852,29 +852,24 @@ function initApp() {
   }, 5 * 60 * 1000);
   setInterval(loadWeather, 15 * 60 * 1000);
 
-  // Refresh calendar and weather every time app comes into view
+  // Refresh when app comes back into view (tab switch, PWA foreground)
+  function refreshOnResume() {
+    if (!currentUser) return;
+    if (currentUser.accessToken) loadCalendarEvents();
+    else reconnectCalendar();
+    loadWeather();
+  }
+
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && currentUser) {
-      if (currentUser.accessToken) {
-        loadCalendarEvents();
-      } else {
-        reconnectCalendar();
-      }
-      loadWeather();
-    }
+    if (!document.hidden) refreshOnResume();
   });
 
-  // Also catches PWA resume from home screen
-  window.addEventListener('pageshow', (e) => {
-    if (e.persisted && currentUser) {
-      if (currentUser.accessToken) {
-        loadCalendarEvents();
-      } else {
-        reconnectCalendar();
-      }
-      loadWeather();
-    }
-  });
+  // Catches window regaining focus — fires when returning from system browser
+  // (e.g. after navigating to Google Calendar from the PWA)
+  window.addEventListener('focus', refreshOnResume);
+
+  // Catches bfcache restore and hard navigations back to the page
+  window.addEventListener('pageshow', refreshOnResume);
 }
 
 function updatePartnerDisplay(users) {
