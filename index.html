@@ -413,7 +413,10 @@
     <div class="card col-span-2">
       <div class="sb">
         <div class="card-title">📅 Upcoming Events</div>
-        <div id="cal-status" class="cal-syncing"></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="cal-status" class="cal-syncing"></div>
+          <button class="btn-accent" id="cal-refresh-btn" onclick="reconnectCalendar()" style="display:none;">↻ Reconnect</button>
+        </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;" id="event-list"></div>
     </div>
@@ -665,8 +668,16 @@ function initApp() {
 
 // ── GOOGLE CALENDAR ───────────────────────────────────────────────────────────
 async function loadCalendarEvents() {
-  if (!currentUser?.accessToken) return;
   const status = document.getElementById('cal-status');
+  const reconnectBtn = document.getElementById('cal-refresh-btn');
+
+  if (!currentUser?.accessToken) {
+    status.innerHTML = `<span style="color:var(--muted)">Token expired</span>`;
+    if (reconnectBtn) reconnectBtn.style.display = 'inline-flex';
+    return;
+  }
+
+  if (reconnectBtn) reconnectBtn.style.display = 'none';
   status.innerHTML = `<span class="spinning">↻</span> Syncing…`;
 
   try {
@@ -679,7 +690,15 @@ async function loadCalendarEvents() {
     const r    = await fetch(url, { headers: { Authorization: `Bearer ${currentUser.accessToken}` } });
     const data = await r.json();
 
-    if (data.error) throw new Error(data.error.message);
+    if (data.error) {
+      if (data.error.code === 401) {
+        currentUser.accessToken = null;
+        status.innerHTML = `<span style="color:var(--muted)">Token expired</span>`;
+        if (reconnectBtn) reconnectBtn.style.display = 'inline-flex';
+        return;
+      }
+      throw new Error(data.error.message);
+    }
 
     EVENTS = (data.items || []).map(item => ({
       id:    item.id,
@@ -690,12 +709,25 @@ async function loadCalendarEvents() {
     }));
 
     status.innerHTML = `<span style="color:var(--good)">✓ Synced</span>`;
+    if (reconnectBtn) reconnectBtn.style.display = 'none';
     renderEvents();
     renderMonthCal();
 
   } catch(e) {
     status.innerHTML = `<span style="color:var(--danger)">⚠ ${e.message}</span>`;
+    if (reconnectBtn) reconnectBtn.style.display = 'inline-flex';
   }
+}
+
+function reconnectCalendar() {
+  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+    'client_id=' + CLIENT_ID +
+    '&redirect_uri=' + encodeURIComponent(location.origin + location.pathname) +
+    '&response_type=token' +
+    '&scope=' + encodeURIComponent('openid email profile ' + SCOPES) +
+    '&prompt=none' +
+    '&login_hint=' + encodeURIComponent(currentUser.email);
+  window.location.href = url;
 }
 
 // ── WEATHER (Open-Meteo, no API key needed) ───────────────────────────────────
