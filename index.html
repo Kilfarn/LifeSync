@@ -4,6 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>LifeSync — Home Dashboard</title>
+<link rel="manifest" href="/LifeSync/manifest.json" />
+<meta name="theme-color" content="#3B82F6" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="LifeSync" />
+<link rel="apple-touch-icon" href="/LifeSync/icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <!-- Google Identity Services -->
@@ -590,6 +596,13 @@
 </div>
 
 <script>
+// ── SERVICE WORKER ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/LifeSync/sw.js')
+    .then(reg => console.log('SW registered:', reg.scope))
+    .catch(err => console.log('SW registration failed:', err));
+}
+
 // ── FIREBASE ──────────────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey:            "AIzaSyCsu27r3D_iuGvYpymUYJdwWVasWEt5EM0",
@@ -1255,15 +1268,32 @@ function scheduleBinNotifications() {
   bins.forEach(bin => {
     const d = daysUntil(bin.next);
     if (d === 0) {
-      // Show notification now for today's bin
       const checkedKey = `bin-done-${bin.next}`;
       if (localStorage.getItem(checkedKey) !== 'true') {
-        new Notification('🗑️ Bin day!', {
-          body: `Put out ${bin.type} today`,
-          icon: '/favicon.ico',
-          tag: `bin-${bin.next}`,
-          requireInteraction: true,
-        });
+        // Use service worker notification if available (works when app is closed)
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification('🗑️ Bin day!', {
+              body: `Don't forget to put out the ${bin.type} today`,
+              icon: '/LifeSync/icon-192.png',
+              badge: '/LifeSync/icon-192.png',
+              tag: `bin-${bin.next}`,
+              requireInteraction: true,
+              actions: [
+                { action: 'done', title: '✓ Done' },
+                { action: 'dismiss', title: 'Dismiss' }
+              ]
+            });
+          });
+        } else {
+          // Fallback to basic notification
+          new Notification('🗑️ Bin day!', {
+            body: `Don't forget to put out the ${bin.type} today`,
+            icon: '/LifeSync/icon-192.png',
+            tag: `bin-${bin.next}`,
+            requireInteraction: true,
+          });
+        }
       }
     }
   });
