@@ -594,6 +594,13 @@
         <button class="modal-close" onclick="closeDayModal()">✕</button>
       </div>
       <div id="modal-events"></div>
+      <a id="modal-add-btn" href="#" target="_blank" rel="noopener noreferrer" style="
+        display:flex;align-items:center;justify-content:center;gap:8px;
+        padding:12px 16px;border-radius:12px;
+        background:var(--accent);color:#fff;
+        font-size:13px;font-weight:600;text-decoration:none;">
+        📅 Add event to Google Calendar
+      </a>
     </div>
   </div>
 </div>
@@ -1096,27 +1103,14 @@ function openDayModal(ds) {
     });
   }
 
-  // Add to Google Calendar button — pre-fills the date
+  // Update the Add to Google Calendar button with the correct date
   const dateFormatted = ds.replace(/-/g, '');
   const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&dates=${dateFormatted}/${dateFormatted}&sf=true&output=xml`;
-  const addBtn = document.createElement('a');
+  const addBtn = document.getElementById('modal-add-btn');
   addBtn.href = gcalUrl;
-  addBtn.target = '_blank';
-  addBtn.rel = 'noopener noreferrer';
-  addBtn.style.cssText = `
-    display:flex;align-items:center;justify-content:center;gap:8px;
-    padding:12px 16px;border-radius:12px;
-    background:var(--accent);border:none;
-    color:#fff;font-size:13px;font-weight:600;text-decoration:none;`;
-  addBtn.innerHTML = `<span style="font-size:16px;">📅</span> Add event to Google Calendar`;
-  addBtn.addEventListener('click', () => {
-    setTimeout(() => {
-      if (currentUser?.accessToken) loadCalendarEvents();
-    }, 3000);
-  });
-
-  // Append button directly to modal, after modal-events
-  document.getElementById('modal-events').after(addBtn);
+  addBtn.onclick = () => {
+    setTimeout(() => { if (currentUser?.accessToken) loadCalendarEvents(); }, 3000);
+  };
 
   document.getElementById('day-modal').classList.add('open');
 }
@@ -1124,9 +1118,6 @@ function openDayModal(ds) {
 function closeDayModal(e) {
   if (!e || e.target === document.getElementById('day-modal')) {
     document.getElementById('day-modal').classList.remove('open');
-    // Remove any lingering add-event buttons
-    const modal = document.querySelector('.modal');
-    modal.querySelectorAll('a[href*="calendar.google.com"]').forEach(el => el.remove());
   }
 }
 
