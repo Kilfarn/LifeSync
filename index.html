@@ -392,6 +392,8 @@
   .spinning { animation: spin 1s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .cal-syncing { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  a.event-item:hover  { filter: brightness(0.95); transform: translateX(2px); transition: all 0.15s; }
+  a.modal-event:hover { filter: brightness(0.95); transition: filter 0.15s; }
 </style>
 </head>
 <body>
@@ -932,6 +934,7 @@ async function loadCalendarEvents() {
       date:  (item.start.dateTime || item.start.date).slice(0, 10),
       time:  item.start.dateTime ? new Date(item.start.dateTime).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) : 'All day',
       cal:   currentUser.slot,
+      link:  item.htmlLink || null,
     }));
 
     // Write this user's events to Firebase so partner sees them
@@ -1090,15 +1093,23 @@ function openDayModal(ds) {
     dayEvs.forEach(ev => {
       const col   = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
       const bgCls = ev.cal === 'p1' ? 'event-p1' : ev.cal === 'p2' ? 'event-p2' : 'event-shared';
-      const div = document.createElement('div');
-      div.className = `modal-event ${bgCls}`;
-      div.innerHTML = `
+      const el = ev.link ? document.createElement('a') : document.createElement('div');
+      el.className = `modal-event ${bgCls}`;
+      if (ev.link) {
+        el.href = ev.link;
+        el.target = '_blank';
+        el.rel = 'noopener noreferrer';
+        el.style.textDecoration = 'none';
+        el.style.cursor = 'pointer';
+      }
+      el.innerHTML = `
         <div class="event-dot" style="background:${col};width:10px;height:10px;border-radius:50%;flex-shrink:0;"></div>
         <div style="flex:1">
           <div style="font-size:14px;font-weight:600;color:var(--text);">${ev.title}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px;">${ev.time}</div>
-        </div>`;
-      container.appendChild(div);
+        </div>
+        ${ev.link ? '<div style="font-size:16px;color:var(--muted);flex-shrink:0;">↗</div>' : ''}`;
+      container.appendChild(el);
     });
   }
 
@@ -1159,16 +1170,23 @@ function renderEvents() {
     const d = daysUntil(ev.date);
     const col   = ev.cal === 'p1' ? 'var(--p1)' : ev.cal === 'p2' ? 'var(--p2)' : 'var(--shared)';
     const bgCls = ev.cal === 'p1' ? 'event-p1' : ev.cal === 'p2' ? 'event-p2' : 'event-shared';
-    const div = document.createElement('div');
-    div.className = `event-item ${bgCls}`;
-    div.innerHTML = `
+    const el = ev.link ? document.createElement('a') : document.createElement('div');
+    el.className = `event-item ${bgCls}`;
+    if (ev.link) {
+      el.href = ev.link;
+      el.target = '_blank';
+      el.rel = 'noopener noreferrer';
+      el.style.textDecoration = 'none';
+      el.style.cursor = 'pointer';
+    }
+    el.innerHTML = `
       <div class="event-dot" style="background:${col}"></div>
       <div style="flex:1">
         <div class="event-title">${ev.title}</div>
         <div class="event-sub">${fmtDate(ev.date)} · ${ev.time}</div>
       </div>
       <div class="event-when">${d===0?'Today':d===1?'Tomorrow':'in '+d+'d'}</div>`;
-    list.appendChild(div);
+    list.appendChild(el);
   });
 }
 
