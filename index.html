@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="app-version" content="20260630-033000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -708,6 +709,19 @@
 </div>
 
 <script>
+// Stale-page guard: if the SW served a cached page older than what we last
+// recorded, do a hard reload so the user never sees a stale UI.
+(function() {
+  const PAGE_VERSION = document.querySelector('meta[name="app-version"]')?.content || '';
+  const STORED       = localStorage.getItem('lifesync-page-version');
+  if (STORED && STORED !== PAGE_VERSION) {
+    localStorage.setItem('lifesync-page-version', PAGE_VERSION);
+    location.reload(true);
+    return;
+  }
+  localStorage.setItem('lifesync-page-version', PAGE_VERSION);
+})();
+
 // Handle bin-done URL param from notification tap when app was closed
 (function() {
   const params = new URLSearchParams(location.search);
