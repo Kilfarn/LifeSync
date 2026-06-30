@@ -359,7 +359,7 @@
     overflow-y: auto;
     box-shadow: 0 -8px 40px rgba(59,100,180,0.15);
     transform: translateY(100%);
-    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), margin-bottom 0.15s ease;
     display: flex; flex-direction: column; gap: 14px;
   }
   .modal-overlay.open .modal { transform: translateY(0); }
@@ -1484,6 +1484,7 @@ function toggleTask(id) {
   saveTasks();
 }
 let _scrollLock = null;
+let _vpHandler  = null;
 function _lockScroll() {
   _scrollLock = e => e.preventDefault();
   document.addEventListener('touchmove', _scrollLock, { passive: false });
@@ -1492,15 +1493,34 @@ function _unlockScroll() {
   if (_scrollLock) document.removeEventListener('touchmove', _scrollLock);
   _scrollLock = null;
 }
+function _watchKeyboard() {
+  if (!window.visualViewport) return;
+  const modal = document.querySelector('#task-modal .modal');
+  _vpHandler = () => {
+    const kb = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+    modal.style.marginBottom = kb ? kb + 'px' : '';
+  };
+  window.visualViewport.addEventListener('resize', _vpHandler);
+  window.visualViewport.addEventListener('scroll', _vpHandler);
+}
+function _unwatchKeyboard() {
+  if (!window.visualViewport || !_vpHandler) return;
+  window.visualViewport.removeEventListener('resize', _vpHandler);
+  window.visualViewport.removeEventListener('scroll', _vpHandler);
+  document.querySelector('#task-modal .modal').style.marginBottom = '';
+  _vpHandler = null;
+}
 function openTaskModal() {
   document.getElementById('task-modal').classList.add('open');
   _lockScroll();
+  _watchKeyboard();
   setTimeout(() => document.getElementById('task-input').focus(), 300);
 }
 function closeTaskModal(e) {
   if (e && e.target !== document.getElementById('task-modal')) return;
   document.getElementById('task-modal').classList.remove('open');
   _unlockScroll();
+  _unwatchKeyboard();
 }
 function addTask() {
   const inp    = document.getElementById('task-input');
@@ -1514,6 +1534,7 @@ function addTask() {
   document.getElementById('task-assign').value = 'none';
   document.getElementById('task-modal').classList.remove('open');
   _unlockScroll();
+  _unwatchKeyboard();
 }
 
 // ── LINKS ─────────────────────────────────────────────────────────────────────
