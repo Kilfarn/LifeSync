@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260630-200000" />
+<meta name="app-version" content="20260630-210000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -400,6 +400,12 @@
     display: flex; flex-direction: column; gap: 14px;
   }
   .modal-overlay.open .modal { transform: translateY(0); }
+  .modal.modal-full {
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+    padding-bottom: calc(40px + env(safe-area-inset-bottom));
+  }
   .modal-header { display: flex; align-items: center; justify-content: space-between; }
   .modal-title  { font-size: 18px; font-weight: 700; color: var(--text); }
   .modal-date   { font-size: 13px; color: var(--muted); margin-top: 2px; }
@@ -701,7 +707,7 @@
 
   <!-- Settings modal -->
   <div class="modal-overlay" id="settings-modal" onclick="closeSettings(event)">
-    <div class="modal">
+    <div class="modal modal-full">
       <div class="modal-header">
         <div class="modal-title">Settings</div>
         <button class="modal-close" onclick="closeSettings()">✕</button>

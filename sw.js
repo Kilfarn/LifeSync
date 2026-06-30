@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lifesync-20260630-200000';
+const CACHE_NAME = 'lifesync-20260630-210000';
 const ASSETS = [
   '/LifeSync/',
   '/LifeSync/index.html',
