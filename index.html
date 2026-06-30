@@ -49,6 +49,7 @@
     color: var(--text);
     font-family: 'Inter', system-ui, sans-serif;
     min-height: 100vh;
+    overflow-x: hidden;
   }
   /* Subtle animated background blobs for depth */
   body::before, body::after {
@@ -310,7 +311,10 @@
   .tag-high   { background: rgba(239,68,68,0.1);  color: var(--danger); border-color: rgba(239,68,68,0.3); }
   .tag-medium { background: rgba(245,158,11,0.1); color: var(--warn);   border-color: rgba(245,158,11,0.3); }
   .tag-low    { background: rgba(107,127,168,0.1);color: var(--muted);  border-color: rgba(107,127,168,0.3); }
-  .task-add-row { display: flex; gap: 6px; }
+  .task-add-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .task-add-row .input-flex { width: 100%; }
+  .task-add-row select { flex: 1; min-width: 0; }
+  .task-add-row .btn-add { flex-shrink: 0; }
   .task-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .dot-blue   { background: #3B82F6; }
   .dot-pink   { background: #EC4899; }
@@ -495,12 +499,12 @@
       </div>
       <div class="task-add-row">
         <input class="input input-flex" id="task-input" placeholder="Add a task…" />
-        <select class="input" id="task-priority" style="width:68px;">
+        <select class="input" id="task-priority">
           <option value="high">High</option>
           <option value="medium" selected>Med</option>
           <option value="low">Low</option>
         </select>
-        <select class="input" id="task-assign" style="width:88px;">
+        <select class="input" id="task-assign">
           <option value="none">Who?</option>
           <option value="blue">Matthew</option>
           <option value="pink">Megan</option>
