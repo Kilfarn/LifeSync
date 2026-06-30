@@ -656,11 +656,12 @@
 <script>
 // Handle bin-done URL param from notification tap when app was closed
 (function() {
-  const p = new URLSearchParams(location.search).get('bin-done');
-  if (p) {
-    localStorage.setItem('bin-done-' + p, 'true');
-    history.replaceState(null, '', location.pathname);
-  }
+  const params = new URLSearchParams(location.search);
+  const done  = params.get('bin-done');
+  const reset = params.get('reset-bin');
+  if (done)  localStorage.setItem('bin-done-' + done, 'true');
+  if (reset) localStorage.removeItem('bin-done-' + reset);
+  if (done || reset) history.replaceState(null, '', location.pathname);
 })();
 
 // ── SERVICE WORKER ────────────────────────────────────────────────────────────
