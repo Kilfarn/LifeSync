@@ -663,6 +663,13 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     window.location.reload();
   });
+
+  // Handle messages from SW (e.g. bin marked done via notification action)
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'bin-done') {
+      toggleBinDone(event.data.date, true);
+    }
+  });
 }
 
 // ── FIREBASE ──────────────────────────────────────────────────────────────────
@@ -916,6 +923,8 @@ function initApp() {
     }
   }, 5 * 60 * 1000);
   setInterval(loadWeather, 15 * 60 * 1000);
+  // Re-fire bin notification every hour while not marked done
+  setInterval(() => { if (Notification.permission === 'granted') scheduleBinNotifications(); }, 60 * 60 * 1000);
 
   // Refresh when app comes back into view (tab switch, PWA foreground)
   function refreshOnResume() {
@@ -923,6 +932,7 @@ function initApp() {
     if (currentUser.accessToken) loadCalendarEvents();
     else refreshCalendarToken();
     loadWeather();
+    if (Notification.permission === 'granted') scheduleBinNotifications();
   }
 
   document.addEventListener('visibilitychange', () => {
@@ -1372,6 +1382,13 @@ function renderBins() {
 function toggleBinDone(dateStr, done) {
   localStorage.setItem(`bin-done-${dateStr}`, done ? 'true' : 'false');
   renderBins();
+  // Close the standing notification when marked done
+  if (done && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(reg =>
+      reg.getNotifications({ tag: `bin-${dateStr}` })
+        .then(notifs => notifs.forEach(n => n.close()))
+    );
+  }
 }
 
 async function requestBinNotifications() {
