@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260630-035000" />
+<meta name="app-version" content="20260630-120000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -143,7 +143,6 @@
   .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
   .logo span { color: var(--accent); }
   .header-right { display: flex; align-items: center; gap: 12px; }
-  .greeting { color: var(--muted); font-size: 14px; }
   .user-badge {
     display: flex; align-items: center; gap: 8px;
     background: rgba(255,255,255,0.7);
@@ -151,6 +150,7 @@
     border-radius: 20px; padding: 5px 12px 5px 6px;
     font-size: 13px; font-weight: 600; color: var(--text);
   }
+  .user-badge:hover { border-color: var(--accent); background: rgba(255,255,255,0.9); }
   .user-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
   .user-avatar-placeholder {
     width: 26px; height: 26px; border-radius: 50%;
@@ -164,12 +164,6 @@
     padding: 5px 10px; font-size: 11px; cursor: pointer;
   }
   .signout-btn:hover { border-color: var(--danger); color: var(--danger); }
-  .settings-btn {
-    background: rgba(255,255,255,0.6); border: 1px solid var(--border-soft);
-    color: var(--muted); border-radius: 8px; width: 30px; height: 30px;
-    font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  }
-  .settings-btn:hover { border-color: var(--accent); color: var(--accent); }
   /* Settings modal */
   .settings-section { display: flex; flex-direction: column; gap: 4px; }
   .settings-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
@@ -474,29 +468,18 @@
   <header class="header">
     <div class="row">
       <div class="logo">life<span>sync</span></div>
-      <div class="greeting" id="greeting"></div>
+      <div id="header-weather" style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);">
+        <span id="weather-icon">⛅</span>
+        <span id="weather-location"></span>
+        <span id="weather-temp" style="font-weight:600;color:var(--text);"></span>
+      </div>
     </div>
     <div class="header-right">
-      <div id="user-badge" class="user-badge"></div>
-      <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
+      <div id="user-badge" class="user-badge" onclick="openSettings()" title="Settings" style="cursor:pointer;"></div>
     </div>
   </header>
 
   <div class="grid">
-
-    <!-- Weather -->
-    <div class="card" style="flex-direction:row;align-items:center;gap:20px;">
-      <div id="weather-icon" class="weather-icon">⛅</div>
-      <div style="flex:1">
-        <div class="card-title" id="weather-location">Weather</div>
-        <div class="weather-temp" id="weather-temp">--°C</div>
-        <div style="color:var(--muted);font-size:13px;" id="weather-desc">Loading…</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:12px;color:var(--muted);" id="weather-hilo"></div>
-        <div id="date-display" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
-      </div>
-    </div>
 
     <!-- Full Month Calendar -->
     <div class="card">
@@ -935,12 +918,6 @@ function showSigninError(msg) {
 
 // ── INIT APP ──────────────────────────────────────────────────────────────────
 function initApp() {
-  const h = new Date().getHours();
-  const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  document.getElementById('greeting').textContent = `— ${greet} 👋`;
-  document.getElementById('date-display').textContent =
-    new Date().toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-
   // User badge
   const slot  = currentUser.slot;
   const color = slot === 'p1' ? 'var(--p1)' : 'var(--p2)';
@@ -994,7 +971,7 @@ function initApp() {
   document.getElementById('task-input').addEventListener('keydown', e => { if(e.key==='Enter') addTask(); });
 
   renderMonthCal();
-  renderEvents();
+  setEventFilter(eventFilterDays);
   renderBins();
   updateBinCard();
   loadWeather();
@@ -1140,13 +1117,9 @@ function fetchWeatherForCoords(lat, lon, locationName) {
     const code = d.current.weathercode;
     document.getElementById('weather-icon').textContent = icons[code] || '🌡️';
     document.getElementById('weather-temp').textContent = Math.round(d.current.temperature_2m) + '°C';
-    document.getElementById('weather-desc').textContent = descs[code] || 'Mixed conditions';
-    document.getElementById('weather-hilo').textContent = `H: ${Math.round(d.daily.temperature_2m_max[0])}° / L: ${Math.round(d.daily.temperature_2m_min[0])}°`;
-    document.getElementById('weather-location').textContent = 'Weather · ' + locationName;
+    document.getElementById('weather-location').textContent = locationName;
   })
-  .catch(() => {
-    document.getElementById('weather-desc').textContent = 'Unable to load';
-  });
+  .catch(() => {});
 }
 
 async function loadWeather() {
@@ -1316,10 +1289,11 @@ function closeDayModal(e) {
 }
 
 // ── EVENTS LIST ───────────────────────────────────────────────────────────────
-let eventFilterDays = 1;
+let eventFilterDays = parseInt(localStorage.getItem('pref-eventFilter') || '1', 10);
 
 function setEventFilter(days) {
   eventFilterDays = days;
+  localStorage.setItem('pref-eventFilter', days);
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.classList.toggle('active', btn.textContent.trim() === days + ' day' || btn.textContent.trim() === days + ' days');
   });
