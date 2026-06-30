@@ -1324,7 +1324,7 @@ function connectFitnessApp(slot, app) {
 function nextTuesdayDate(weeksAhead) {
   const d = new Date();
   const day = d.getDay();
-  const daysUntilTue = (2 - day + 7) % 7 || 7;
+  const daysUntilTue = (2 - day + 7) % 7; // 0 when today is Tuesday
   d.setDate(d.getDate() + daysUntilTue + weeksAhead * 7);
   return d.toISOString().slice(0, 10);
 }
@@ -1333,7 +1333,7 @@ function calcBins() {
   const ANCHOR     = new Date('2026-07-01');
   const today      = new Date();
   const day        = today.getDay();
-  const daysToTue  = (2 - day + 7) % 7 || 7;
+  const daysToTue  = (2 - day + 7) % 7; // 0 when today is Tuesday
   const nextTue    = new Date(today);
   nextTue.setDate(today.getDate() + daysToTue);
   const weeksDiff  = Math.round((nextTue - ANCHOR) / (7 * 86400000));
