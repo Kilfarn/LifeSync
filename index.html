@@ -1485,11 +1485,17 @@ function toggleTask(id) {
 }
 function openTaskModal() {
   document.getElementById('task-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
   setTimeout(() => document.getElementById('task-input').focus(), 300);
 }
 function closeTaskModal(e) {
   if (e && e.target !== document.getElementById('task-modal')) return;
   document.getElementById('task-modal').classList.remove('open');
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
 }
 function addTask() {
   const inp    = document.getElementById('task-input');
@@ -1502,6 +1508,9 @@ function addTask() {
   document.getElementById('task-priority').value = 'medium';
   document.getElementById('task-assign').value = 'none';
   document.getElementById('task-modal').classList.remove('open');
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
 }
 
 // ── LINKS ─────────────────────────────────────────────────────────────────────
