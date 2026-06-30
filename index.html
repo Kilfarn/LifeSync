@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260630-190000" />
+<meta name="app-version" content="20260630-200000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -736,6 +736,40 @@
           </div>
           <label class="toggle">
             <input type="checkbox" id="pref-notif" onchange="toggleNotifPref(this.checked)" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">Meal Planning</div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Breakfast</div>
+            <div class="settings-row-sub">Show breakfast slot in the meal planner</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="pref-meal-breakfast" onchange="savePref('meal-breakfast', this.checked); renderMealPlan();" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Lunch</div>
+            <div class="settings-row-sub">Show lunch slot in the meal planner</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="pref-meal-lunch" onchange="savePref('meal-lunch', this.checked); renderMealPlan();" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Dinner</div>
+            <div class="settings-row-sub">Show dinner slot in the meal planner</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="pref-meal-dinner" onchange="savePref('meal-dinner', this.checked); renderMealPlan();" />
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -1475,10 +1509,10 @@ function renderMealPlan() {
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const types = [
-    { key: 'breakfast', label: 'B' },
-    { key: 'lunch',     label: 'L' },
-    { key: 'dinner',    label: 'D' },
-  ];
+    { key: 'breakfast', label: 'B', def: false },
+    { key: 'lunch',     label: 'L', def: true  },
+    { key: 'dinner',    label: 'D', def: true  },
+  ].filter(t => getPref('meal-' + t.key, t.def));
 
   grid.innerHTML = days.map(d => {
     const dateStr = d.toISOString().slice(0, 10);
@@ -1520,14 +1554,16 @@ function openMealModal(date, type) {
   const existing = (MEALS[date] || {})[type];
   document.getElementById('meal-input').value = existing?.text || '';
   document.getElementById('meal-modal').classList.add('open');
-  setTimeout(() => document.getElementById('meal-input').focus(), 80);
   _lockScroll();
+  _watchKeyboard('#meal-modal .modal');
+  setTimeout(() => document.getElementById('meal-input').focus(), 80);
 }
 
 function closeMealModal(e) {
   if (e && e.target !== document.getElementById('meal-modal')) return;
   document.getElementById('meal-modal').classList.remove('open');
   _unlockScroll();
+  _unwatchKeyboard();
   editingMeal = null;
 }
 
@@ -1795,8 +1831,11 @@ function openSettings() {
   // Sync toggles to current prefs
   document.getElementById('pref-bin-window').checked   = getPref('binWindow', true);
   document.getElementById('pref-bin-hide-done').checked = getPref('binHideDone', true);
-  document.getElementById('pref-dark-mode').checked    = localStorage.getItem('pref-darkMode') === 'true';
-  document.getElementById('pref-sticky-header').checked = localStorage.getItem('pref-stickyHeader') !== 'false';
+  document.getElementById('pref-meal-breakfast').checked = getPref('meal-breakfast', false);
+  document.getElementById('pref-meal-lunch').checked     = getPref('meal-lunch', true);
+  document.getElementById('pref-meal-dinner').checked    = getPref('meal-dinner', true);
+  document.getElementById('pref-dark-mode').checked      = localStorage.getItem('pref-darkMode') === 'true';
+  document.getElementById('pref-sticky-header').checked  = localStorage.getItem('pref-stickyHeader') !== 'false';
   const notifGranted = Notification.permission === 'granted';
   const notifDenied  = Notification.permission === 'denied';
   document.getElementById('pref-notif').checked = notifGranted;
@@ -1912,21 +1951,23 @@ function _unlockScroll() {
   if (_scrollLock) document.removeEventListener('touchmove', _scrollLock);
   _scrollLock = null;
 }
-function _watchKeyboard() {
+function _watchKeyboard(sel = '#task-modal .modal') {
   if (!window.visualViewport) return;
-  const modal = document.querySelector('#task-modal .modal');
+  const modal = document.querySelector(sel);
   _vpHandler = () => {
     const kb = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
     modal.style.marginBottom = kb ? kb + 'px' : '';
   };
   window.visualViewport.addEventListener('resize', _vpHandler);
   window.visualViewport.addEventListener('scroll', _vpHandler);
+  _vpHandler._sel = sel;
 }
 function _unwatchKeyboard() {
   if (!window.visualViewport || !_vpHandler) return;
   window.visualViewport.removeEventListener('resize', _vpHandler);
   window.visualViewport.removeEventListener('scroll', _vpHandler);
-  document.querySelector('#task-modal .modal').style.marginBottom = '';
+  const modal = document.querySelector(_vpHandler._sel || '#task-modal .modal');
+  if (modal) modal.style.marginBottom = '';
   _vpHandler = null;
 }
 function openTaskModal() {
