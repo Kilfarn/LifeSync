@@ -657,8 +657,12 @@
 // ── SERVICE WORKER ────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/LifeSync/sw.js')
-    .then(reg => console.log('SW registered:', reg.scope))
     .catch(err => console.log('SW registration failed:', err));
+
+  // When a new SW takes over, reload so the fresh HTML is used immediately
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
 }
 
 // ── FIREBASE ──────────────────────────────────────────────────────────────────

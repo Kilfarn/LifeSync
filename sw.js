@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lifesync-20260630-013000';
+const CACHE_NAME = 'lifesync-20260630-014000';
 const ASSETS = [
   '/LifeSync/',
   '/LifeSync/index.html',
@@ -7,7 +7,7 @@ const ASSETS = [
   '/LifeSync/manifest.json',
 ];
 
-// Install — cache core assets
+// Install — cache core assets and skip waiting immediately
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
@@ -15,23 +15,21 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Activate — clean up old caches, then claim all clients so they reload fresh
+// Activate — clean up old caches and claim clients
+// The page detects controllerchange and reloads itself (see index.html)
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
-      .then(() => self.clients.matchAll({ type: 'window' }))
-      .then(clients => clients.forEach(c => c.navigate(c.url)))
   );
 });
 
-// Fetch — network-first for HTML navigation (always get fresh app shell),
-//         cache-first for everything else (icons, manifest, etc.)
+// Fetch — network-first for HTML (always fresh), cache-first for assets
 self.addEventListener('fetch', event => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
+      fetch(event.request, { cache: 'no-cache' }).catch(() => caches.match(event.request))
     );
     return;
   }
