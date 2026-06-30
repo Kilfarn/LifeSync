@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260630-120000" />
+<meta name="app-version" content="20260630-130000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -468,10 +468,10 @@
   <header class="header">
     <div class="row">
       <div class="logo">life<span>sync</span></div>
-      <div id="header-weather" style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);">
-        <span id="weather-icon">⛅</span>
-        <span id="weather-location"></span>
-        <span id="weather-temp" style="font-weight:600;color:var(--text);"></span>
+      <div id="header-weather" style="display:flex;align-items:center;gap:5px;">
+        <span id="weather-icon" style="font-size:20px;line-height:1;">⛅</span>
+        <span id="weather-location" style="font-size:12px;color:var(--muted);"></span>
+        <span id="weather-temp" style="font-size:13px;font-weight:600;color:var(--text);"></span>
       </div>
     </div>
     <div class="header-right">
@@ -1107,10 +1107,9 @@ function reconnectCalendar() {
 // ── WEATHER (Open-Meteo, no API key needed) ───────────────────────────────────
 function fetchWeatherForCoords(lat, lon, locationName) {
   const icons = { 0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️', 45:'🌫️', 48:'🌫️', 51:'🌦️', 53:'🌦️', 55:'🌧️', 61:'🌧️', 63:'🌧️', 65:'🌧️', 71:'❄️', 73:'❄️', 75:'❄️', 80:'🌦️', 81:'🌧️', 82:'⛈️', 95:'⛈️' };
-  const descs = { 0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast', 45:'Foggy', 51:'Light drizzle', 61:'Light rain', 63:'Moderate rain', 65:'Heavy rain', 71:'Light snow', 80:'Rain showers', 95:'Thunderstorm' };
   fetch(
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-    `&current=temperature_2m,weathercode&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
+    `&current=temperature_2m,weathercode&timezone=auto`
   )
   .then(r => r.json())
   .then(d => {
@@ -1134,7 +1133,6 @@ async function loadWeather() {
   }
 
   // No cache or cache expired — run geolocation
-  document.getElementById('weather-desc').textContent = 'Locating…';
 
   async function reverseGeocode(lat, lon) {
     try {
