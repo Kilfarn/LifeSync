@@ -311,10 +311,12 @@
   .tag-high   { background: rgba(239,68,68,0.1);  color: var(--danger); border-color: rgba(239,68,68,0.3); }
   .tag-medium { background: rgba(245,158,11,0.1); color: var(--warn);   border-color: rgba(245,158,11,0.3); }
   .tag-low    { background: rgba(107,127,168,0.1);color: var(--muted);  border-color: rgba(107,127,168,0.3); }
-  .task-add-row { display: flex; gap: 6px; flex-wrap: wrap; }
-  .task-add-row .input-flex { width: 100%; }
-  .task-add-row select { flex: 1; min-width: 0; }
-  .task-add-row .btn-add { flex-shrink: 0; }
+  .task-add-btn { width: 100%; padding: 10px; border-radius: 12px; border: 1.5px dashed var(--border); background: var(--glass); color: var(--muted); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .task-add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  /* task modal form rows */
+  .task-modal-body { display: flex; flex-direction: column; gap: 12px; }
+  .task-modal-row  { display: flex; gap: 8px; }
+  .task-modal-row select { flex: 1; min-width: 0; }
   .task-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .dot-blue   { background: #3B82F6; }
   .dot-pink   { background: #EC4899; }
@@ -497,22 +499,7 @@
         <div class="card-title">✅ Household Tasks</div>
         <span id="task-count" style="font-size:12px;color:var(--muted);"></span>
       </div>
-      <div class="task-add-row">
-        <input class="input input-flex" id="task-input" placeholder="Add a task…" />
-        <select class="input" id="task-priority">
-          <option value="high">High</option>
-          <option value="medium" selected>Med</option>
-          <option value="low">Low</option>
-        </select>
-        <select class="input" id="task-assign">
-          <option value="none">Who?</option>
-          <option value="blue">Matthew</option>
-          <option value="pink">Megan</option>
-          <option value="green">Together</option>
-          <option value="yellow">Open</option>
-        </select>
-        <button class="btn-add" onclick="addTask()">+</button>
-      </div>
+      <button class="task-add-btn" onclick="openTaskModal()">+ Add task</button>
       <div id="task-list"></div>
     </div>
 
@@ -615,6 +602,34 @@
 
   </div>
   <div class="footer">lifesync · your home, in sync</div>
+
+  <!-- Add task modal -->
+  <div class="modal-overlay" id="task-modal" onclick="closeTaskModal(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">New Task</div>
+        <button class="modal-close" onclick="closeTaskModal()">✕</button>
+      </div>
+      <div class="task-modal-body">
+        <input class="input" id="task-input" placeholder="What needs doing?" style="font-size:15px;" />
+        <div class="task-modal-row">
+          <select class="input" id="task-priority">
+            <option value="high">High priority</option>
+            <option value="medium" selected>Medium priority</option>
+            <option value="low">Low priority</option>
+          </select>
+          <select class="input" id="task-assign">
+            <option value="none">Who?</option>
+            <option value="blue">Matthew</option>
+            <option value="pink">Megan</option>
+            <option value="green">Together</option>
+            <option value="yellow">Open</option>
+          </select>
+        </div>
+        <button class="btn-accent" style="width:100%;padding:12px;font-size:15px;" onclick="addTask()">Add Task</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Day detail modal -->
   <div class="modal-overlay" id="day-modal" onclick="closeDayModal(event)">
@@ -1468,6 +1483,14 @@ function toggleTask(id) {
   TASKS = TASKS.map(t => t.id===id ? {...t, done:!t.done} : t);
   saveTasks();
 }
+function openTaskModal() {
+  document.getElementById('task-modal').classList.add('open');
+  setTimeout(() => document.getElementById('task-input').focus(), 300);
+}
+function closeTaskModal(e) {
+  if (e && e.target !== document.getElementById('task-modal')) return;
+  document.getElementById('task-modal').classList.remove('open');
+}
 function addTask() {
   const inp    = document.getElementById('task-input');
   const pri    = document.getElementById('task-priority').value;
@@ -1476,7 +1499,9 @@ function addTask() {
   const newTask = { id: Date.now(), text: inp.value.trim(), done: false, priority: pri, assign };
   db.ref('tasks/t' + newTask.id).set(newTask);
   inp.value = '';
+  document.getElementById('task-priority').value = 'medium';
   document.getElementById('task-assign').value = 'none';
+  document.getElementById('task-modal').classList.remove('open');
 }
 
 // ── LINKS ─────────────────────────────────────────────────────────────────────
