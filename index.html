@@ -654,6 +654,15 @@
 </div>
 
 <script>
+// Handle bin-done URL param from notification tap when app was closed
+(function() {
+  const p = new URLSearchParams(location.search).get('bin-done');
+  if (p) {
+    localStorage.setItem('bin-done-' + p, 'true');
+    history.replaceState(null, '', location.pathname);
+  }
+})();
+
 // ── SERVICE WORKER ────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/LifeSync/sw.js')
@@ -932,7 +941,8 @@ function initApp() {
     if (currentUser.accessToken) loadCalendarEvents();
     else refreshCalendarToken();
     loadWeather();
-    if (Notification.permission === 'granted') scheduleBinNotifications();
+    // Delay so any postMessage from a notification action arrives first
+    setTimeout(() => { if (Notification.permission === 'granted') scheduleBinNotifications(); }, 600);
   }
 
   document.addEventListener('visibilitychange', () => {

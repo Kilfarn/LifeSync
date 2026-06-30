@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lifesync-20260630-023000';
+const CACHE_NAME = 'lifesync-20260630-024000';
 const ASSETS = [
   '/LifeSync/',
   '/LifeSync/index.html',
@@ -64,9 +64,13 @@ self.addEventListener('notificationclick', event => {
     const date = event.notification.tag.replace('bin-', '');
     event.waitUntil(
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-        clientList.forEach(c => c.postMessage({ type: 'bin-done', date }));
-        if (clientList.length > 0) return clientList[0].focus();
-        return self.clients.openWindow('/LifeSync/');
+        if (clientList.length > 0) {
+          // App is open — postMessage to mark done, then focus
+          clientList.forEach(c => c.postMessage({ type: 'bin-done', date }));
+          return clientList[0].focus();
+        }
+        // App is closed — open with URL param so it marks done on load
+        return self.clients.openWindow('/LifeSync/?bin-done=' + date);
       })
     );
     return;
