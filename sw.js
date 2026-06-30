@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lifesync-20260630-001500';
+const CACHE_NAME = 'lifesync-20260630-002500';
 const ASSETS = [
   '/LifeSync/',
   '/LifeSync/index.html',
@@ -15,18 +15,26 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Activate — clean up old caches
+// Activate — clean up old caches, then claim all clients so they reload fresh
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then(clients => clients.forEach(c => c.navigate(c.url)))
   );
-  self.clients.claim();
 });
 
-// Fetch — serve from cache, fall back to network
+// Fetch — network-first for HTML navigation (always get fresh app shell),
+//         cache-first for everything else (icons, manifest, etc.)
 self.addEventListener('fetch', event => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then(cached => cached || fetch(event.request))
   );
