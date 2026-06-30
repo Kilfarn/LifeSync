@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260630-130000" />
+<meta name="app-version" content="20260630-150000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -44,6 +44,9 @@
     --shadow-sm:   0 2px 12px rgba(59, 100, 180, 0.08);
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html {
+    overflow-x: clip; /* clip (not hidden) so position:sticky in children still works */
+  }
   html, body {
     background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-to) 100%);
     background-attachment: fixed;
@@ -429,6 +432,43 @@
   .splash.fade-out { opacity: 0; pointer-events: none; }
   .splash-logo { font-size: 36px; font-weight: 700; letter-spacing: -1px; color: var(--text); }
   .splash-logo span { color: var(--accent); }
+
+  /* ── Dark mode ── */
+  [data-theme="dark"] {
+    --bg-from:     #0d1117;
+    --bg-to:       #0f1929;
+    --glass:       rgba(22, 32, 50, 0.82);
+    --glass-hover: rgba(22, 32, 50, 0.96);
+    --glass-deep:  rgba(13, 20, 35, 0.65);
+    --border:      rgba(255, 255, 255, 0.08);
+    --border-soft: rgba(100, 140, 200, 0.14);
+    --text:        #e6edf3;
+    --muted:       #8b949e;
+    --shadow:      0 8px 32px rgba(0, 0, 0, 0.55);
+    --shadow-sm:   0 2px 12px rgba(0, 0, 0, 0.38);
+  }
+  [data-theme="dark"] body::before { background: radial-gradient(circle, #1a3a6e, #0d2040); }
+  [data-theme="dark"] body::after  { background: radial-gradient(circle, #0d3322, #061a12); }
+  [data-theme="dark"] .user-badge  { background: rgba(255,255,255,0.07); }
+  [data-theme="dark"] .user-badge:hover { background: rgba(255,255,255,0.13); }
+  [data-theme="dark"] .btn-ghost   { background: rgba(255,255,255,0.05); }
+  [data-theme="dark"] .input       { background: rgba(255,255,255,0.06); }
+  [data-theme="dark"] .input:focus { background: rgba(255,255,255,0.10); }
+  [data-theme="dark"] .input option { background: #1c2844; color: var(--text); }
+  [data-theme="dark"] .month-nav-btn { background: rgba(255,255,255,0.06); }
+  [data-theme="dark"] .month-nav-btn:hover { background: rgba(255,255,255,0.12); }
+  [data-theme="dark"] .modal        { background: #192338; }
+  [data-theme="dark"] .modal-close  { background: rgba(255,255,255,0.08); }
+  [data-theme="dark"] .filter-btn   { background: rgba(255,255,255,0.06); }
+  [data-theme="dark"] .fitness-app-btn { background: rgba(255,255,255,0.06); }
+  [data-theme="dark"] .fitness-app-btn:hover { background: rgba(255,255,255,0.12); }
+  [data-theme="dark"] .link-item:hover { background: rgba(255,255,255,0.12); }
+  [data-theme="dark"] .cal-day.has-events { background: rgba(255,255,255,0.07); }
+  [data-theme="dark"] .cal-day:not(.other-month):hover { background: rgba(255,255,255,0.10); }
+  [data-theme="dark"] .task-item  { border-bottom-color: rgba(100,140,200,0.14); }
+  [data-theme="dark"] .divider    { background: rgba(100,140,200,0.14); }
+  [data-theme="dark"] .modal-overlay { background: rgba(0,0,0,0.55); }
+  [data-theme="dark"] .signin-card   { background: rgba(22,32,50,0.88); }
 </style>
 </head>
 <body>
@@ -642,6 +682,20 @@
       </div>
 
       <div class="settings-section">
+        <div class="settings-label">Appearance</div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Dark mode</div>
+            <div class="settings-row-sub">Switch to a darker colour scheme</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="pref-dark-mode" onchange="applyTheme(this.checked)" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
         <div class="settings-label">Account</div>
         <div class="settings-row" style="cursor:pointer;" onclick="signOut()">
           <div class="settings-row-label" style="color:var(--danger);">Sign out</div>
@@ -712,6 +766,12 @@
     return;
   }
   localStorage.setItem('lifesync-page-version', PAGE_VERSION);
+})();
+
+// Apply saved theme before first paint to avoid flash
+(function() {
+  if (localStorage.getItem('pref-darkMode') === 'true')
+    document.documentElement.setAttribute('data-theme', 'dark');
 })();
 
 // Handle bin-done URL param from notification tap when app was closed
@@ -1518,10 +1578,16 @@ function updateBinCard() {
   }
 }
 
+function applyTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  localStorage.setItem('pref-darkMode', dark);
+}
+
 function openSettings() {
   // Sync toggles to current prefs
   document.getElementById('pref-bin-window').checked   = getPref('binWindow', true);
   document.getElementById('pref-bin-hide-done').checked = getPref('binHideDone', true);
+  document.getElementById('pref-dark-mode').checked    = localStorage.getItem('pref-darkMode') === 'true';
   const notifGranted = Notification.permission === 'granted';
   const notifDenied  = Notification.permission === 'denied';
   document.getElementById('pref-notif').checked = notifGranted;
