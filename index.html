@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260630-160000" />
+<meta name="app-version" content="20260630-170000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -140,6 +140,7 @@
     z-index: 100;
     box-shadow: var(--shadow-sm);
   }
+  .header-scroll { position: static; box-shadow: none; }
   .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
   .logo span { color: var(--accent); }
   .header-right { display: flex; align-items: center; gap: 12px; }
@@ -690,6 +691,16 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Sticky header</div>
+            <div class="settings-row-sub">Keep the top bar fixed while scrolling</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="pref-sticky-header" onchange="applyStickyHeader(this.checked)" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
 
       <div class="settings-section">
@@ -765,10 +776,14 @@
   localStorage.setItem('lifesync-page-version', PAGE_VERSION);
 })();
 
-// Apply saved theme before first paint to avoid flash
+// Apply saved theme and header preference before first paint
 (function() {
   if (localStorage.getItem('pref-darkMode') === 'true')
     document.documentElement.setAttribute('data-theme', 'dark');
+  // Sticky header defaults to ON; apply non-sticky class if explicitly disabled
+  if (localStorage.getItem('pref-stickyHeader') === 'false')
+    document.addEventListener('DOMContentLoaded', () =>
+      document.querySelector('.header')?.classList.add('header-scroll'));
 })();
 
 // Handle bin-done URL param from notification tap when app was closed
@@ -1575,6 +1590,11 @@ function updateBinCard() {
   }
 }
 
+function applyStickyHeader(sticky) {
+  document.querySelector('.header').classList.toggle('header-scroll', !sticky);
+  localStorage.setItem('pref-stickyHeader', sticky);
+}
+
 function applyTheme(dark) {
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
   localStorage.setItem('pref-darkMode', dark);
@@ -1585,6 +1605,7 @@ function openSettings() {
   document.getElementById('pref-bin-window').checked   = getPref('binWindow', true);
   document.getElementById('pref-bin-hide-done').checked = getPref('binHideDone', true);
   document.getElementById('pref-dark-mode').checked    = localStorage.getItem('pref-darkMode') === 'true';
+  document.getElementById('pref-sticky-header').checked = localStorage.getItem('pref-stickyHeader') !== 'false';
   const notifGranted = Notification.permission === 'granted';
   const notifDenied  = Notification.permission === 'denied';
   document.getElementById('pref-notif').checked = notifGranted;
