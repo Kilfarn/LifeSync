@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260630-150000" />
+<meta name="app-version" content="20260630-160000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -44,16 +44,13 @@
     --shadow-sm:   0 2px 12px rgba(59, 100, 180, 0.08);
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html {
-    overflow-x: clip; /* clip (not hidden) so position:sticky in children still works */
-  }
   html, body {
     background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-to) 100%);
     background-attachment: fixed;
     color: var(--text);
     font-family: 'Inter', system-ui, sans-serif;
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: clip; /* clip prevents horizontal scroll without creating a scroll container; hidden would break position:sticky */
   }
   /* Subtle animated background blobs for depth */
   body::before, body::after {
