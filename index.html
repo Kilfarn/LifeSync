@@ -1492,7 +1492,24 @@ function updateBinCard() {
   const card = document.getElementById('bin-card');
   if (!card) return;
   const windowed = getPref('binWindow', true);
-  card.style.display = (windowed && !isBinWindow()) ? 'none' : '';
+  const active   = isBinWindow();
+
+  if (windowed && !active) {
+    // Outside reminder window — hide entirely
+    card.style.display    = 'none';
+    card.style.order      = '';
+    card.style.gridColumn = '';
+  } else if (active) {
+    // In reminder window — float to top, full width
+    card.style.display    = '';
+    card.style.order      = '-1';
+    card.style.gridColumn = '1 / -1';
+  } else {
+    // Windowed pref off and outside window — show in normal position
+    card.style.display    = '';
+    card.style.order      = '';
+    card.style.gridColumn = '';
+  }
 }
 
 function openSettings() {
