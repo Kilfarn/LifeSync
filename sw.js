@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lifesync-20260630-022000';
+const CACHE_NAME = 'lifesync-20260630-023000';
 const ASSETS = [
   '/LifeSync/',
   '/LifeSync/index.html',
@@ -53,15 +53,17 @@ self.addEventListener('push', event => {
   );
 });
 
-// Notification click — handle bin 'done' action or just open the app
+// Notification click — handle bin actions or open the app
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+
+  // Dismiss action: close only, don't open the app
+  if (event.action === 'dismiss') return;
 
   if (event.action === 'done' && event.notification.tag.startsWith('bin-')) {
     const date = event.notification.tag.replace('bin-', '');
     event.waitUntil(
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-        // Tell any open app window to mark the bin as done
         clientList.forEach(c => c.postMessage({ type: 'bin-done', date }));
         if (clientList.length > 0) return clientList[0].focus();
         return self.clients.openWindow('/LifeSync/');
@@ -70,6 +72,7 @@ self.addEventListener('notificationclick', event => {
     return;
   }
 
+  // Tapping the notification body opens the app
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       if (clientList.length > 0) return clientList[0].focus();
