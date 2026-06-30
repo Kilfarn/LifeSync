@@ -1483,19 +1483,24 @@ function toggleTask(id) {
   TASKS = TASKS.map(t => t.id===id ? {...t, done:!t.done} : t);
   saveTasks();
 }
+let _scrollLock = null;
+function _lockScroll() {
+  _scrollLock = e => e.preventDefault();
+  document.addEventListener('touchmove', _scrollLock, { passive: false });
+}
+function _unlockScroll() {
+  if (_scrollLock) document.removeEventListener('touchmove', _scrollLock);
+  _scrollLock = null;
+}
 function openTaskModal() {
   document.getElementById('task-modal').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  document.body.style.position = 'fixed';
-  document.body.style.width = '100%';
+  _lockScroll();
   setTimeout(() => document.getElementById('task-input').focus(), 300);
 }
 function closeTaskModal(e) {
   if (e && e.target !== document.getElementById('task-modal')) return;
   document.getElementById('task-modal').classList.remove('open');
-  document.body.style.overflow = '';
-  document.body.style.position = '';
-  document.body.style.width = '';
+  _unlockScroll();
 }
 function addTask() {
   const inp    = document.getElementById('task-input');
@@ -1508,9 +1513,7 @@ function addTask() {
   document.getElementById('task-priority').value = 'medium';
   document.getElementById('task-assign').value = 'none';
   document.getElementById('task-modal').classList.remove('open');
-  document.body.style.overflow = '';
-  document.body.style.position = '';
-  document.body.style.width = '';
+  _unlockScroll();
 }
 
 // ── LINKS ─────────────────────────────────────────────────────────────────────
