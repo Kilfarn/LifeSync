@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260630-033000" />
+<meta name="app-version" content="20260630-035000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -479,7 +479,6 @@
     <div class="header-right">
       <div id="user-badge" class="user-badge"></div>
       <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
-      <button class="signout-btn" onclick="signOut()">Sign out</button>
     </div>
   </header>
 
@@ -634,6 +633,16 @@
           </div>
           <label class="toggle">
             <input type="checkbox" id="pref-bin-window" onchange="savePref('binWindow', this.checked); updateBinCard();" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Hide when done</div>
+            <div class="settings-row-sub">Dismiss bin card once bins are put out</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="pref-bin-hide-done" onchange="savePref('binHideDone', this.checked); updateBinCard();" />
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -1462,6 +1471,7 @@ function renderBins() {
 function toggleBinDone(dateStr, done) {
   localStorage.setItem(`bin-done-${dateStr}`, done ? 'true' : 'false');
   renderBins();
+  updateBinCard();
   // Close the standing notification when marked done
   if (done && 'serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(reg =>
@@ -1502,24 +1512,34 @@ function isBinWindow() {
   return (d === 1 && h >= 19) || d === 2; // Mon 7pm or any time Tuesday
 }
 
+function isTodayBinDone() {
+  const bins = calcBins();
+  const todayBin = bins.find(b => daysUntil(b.next) === 0);
+  return todayBin ? localStorage.getItem('bin-done-' + todayBin.next) === 'true' : false;
+}
+
 function updateBinCard() {
   const card = document.getElementById('bin-card');
   if (!card) return;
   const windowed = getPref('binWindow', true);
+  const hideDone = getPref('binHideDone', true);
   const active   = isBinWindow();
+  const done     = isTodayBinDone();
 
-  if (windowed && !active) {
-    // Outside reminder window — hide entirely
+  // Hide if: outside window (and windowed pref on), or bins are done (and hideDone pref on)
+  if ((windowed && !active) || (hideDone && done)) {
     card.style.display    = 'none';
     card.style.order      = '';
     card.style.gridColumn = '';
-  } else if (active) {
+    return;
+  }
+
+  if (active) {
     // In reminder window — float to top, full width
     card.style.display    = '';
     card.style.order      = '-1';
     card.style.gridColumn = '1 / -1';
   } else {
-    // Windowed pref off and outside window — show in normal position
     card.style.display    = '';
     card.style.order      = '';
     card.style.gridColumn = '';
@@ -1528,7 +1548,8 @@ function updateBinCard() {
 
 function openSettings() {
   // Sync toggles to current prefs
-  document.getElementById('pref-bin-window').checked = getPref('binWindow', true);
+  document.getElementById('pref-bin-window').checked   = getPref('binWindow', true);
+  document.getElementById('pref-bin-hide-done').checked = getPref('binHideDone', true);
   const notifGranted = Notification.permission === 'granted';
   const notifDenied  = Notification.permission === 'denied';
   document.getElementById('pref-notif').checked = notifGranted;
