@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260701-000000" />
+<meta name="app-version" content="20260701-001000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -1794,16 +1794,38 @@ async function extractFromUrl() {
   const url = document.getElementById('recipe-url').value.trim();
   if (!url) { document.getElementById('recipe-url').focus(); return; }
 
-  const statusEl  = document.getElementById('extract-status');
-  const btn       = document.getElementById('extract-btn');
+  const statusEl = document.getElementById('extract-status');
+  const btn      = document.getElementById('extract-btn');
   statusEl.textContent = 'Fetching recipe…';
   btn.disabled = true;
 
   try {
-    const proxy    = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
-    const response = await fetch(proxy);
-    const json     = await response.json();
-    const html     = json.contents;
+    // Try two CORS proxies in sequence; corsproxy.io handles Cloudflare-protected
+    // sites better than allorigins.win
+    let html = null;
+    const proxies = [
+      { url: 'https://corsproxy.io/?' + encodeURIComponent(url), json: false },
+      { url: 'https://api.allorigins.win/get?url=' + encodeURIComponent(url), json: true },
+    ];
+
+    for (const proxy of proxies) {
+      try {
+        const res = await fetch(proxy.url);
+        if (!res.ok) continue;
+        if (proxy.json) {
+          const data = await res.json();
+          if (data.status?.http_code === 200 && data.contents) { html = data.contents; break; }
+        } else {
+          html = await res.text();
+          if (html) break;
+        }
+      } catch(_) {}
+    }
+
+    if (!html) {
+      statusEl.textContent = '⚠ Could not fetch — site may block extraction, fill in manually';
+      return;
+    }
 
     const doc     = new DOMParser().parseFromString(html, 'text/html');
     const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
@@ -1822,7 +1844,7 @@ async function extractFromUrl() {
     }
 
     if (!recipe) {
-      statusEl.textContent = '⚠ No recipe data found — please fill in manually';
+      statusEl.textContent = '⚠ No recipe data found — site may not support extraction';
       return;
     }
 
@@ -1831,8 +1853,8 @@ async function extractFromUrl() {
     }
 
     if (recipe.recipeIngredient?.length) {
-      const raw     = recipe.recipeIngredient;
-      const yield_  = recipe.recipeYield;
+      const raw      = recipe.recipeIngredient;
+      const yield_   = recipe.recipeYield;
       const servings = parseInt(Array.isArray(yield_) ? yield_[0] : yield_) || 0;
       let note = '';
       if (servings && servings !== 4) note = `\n# Original serves ${servings} — adjust for 4`;
@@ -1842,7 +1864,7 @@ async function extractFromUrl() {
       statusEl.textContent = '⚠ Ingredients not found — please add manually';
     }
   } catch(err) {
-    statusEl.textContent = '⚠ Could not fetch — check the URL or add manually';
+    statusEl.textContent = '⚠ Could not extract — check the URL or fill in manually';
   } finally {
     btn.disabled = false;
   }
