@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260701-002000" />
+<meta name="app-version" content="20260902-120000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -131,16 +131,167 @@
     backdrop-filter: blur(20px) saturate(1.8);
     -webkit-backdrop-filter: blur(20px) saturate(1.8);
     border-bottom: 1px solid var(--border);
-    padding: 14px 28px;
+    padding: 14px 28px 10px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 8px;
     position: sticky;
     top: 0;
     z-index: 100;
     box-shadow: var(--shadow-sm);
   }
+  .header-top { display: flex; align-items: center; justify-content: space-between; }
   .header-scroll { position: static; box-shadow: none; }
+
+  /* ── App tab nav ── */
+  .tab-nav { display: flex; gap: 2px; }
+  .tab-btn {
+    padding: 5px 14px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+  }
+  .tab-btn.active { background: var(--accent-soft); color: var(--accent); }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+
+  /* ── Rankings view ── */
+  .rankings-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 20px 16px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .rank-tabs {
+    display: flex;
+    gap: 6px;
+    background: var(--glass-deep);
+    border-radius: 12px;
+    padding: 4px;
+    border: 1px solid var(--border-soft);
+  }
+  .rank-tab {
+    flex: 1;
+    padding: 7px 12px;
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .rank-tab.active { background: var(--glass); color: var(--text); box-shadow: var(--shadow-sm); }
+
+  /* Search */
+  .rank-search-wrap { position: relative; }
+  .rank-suggestions {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0; right: 0;
+    background: var(--glass);
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    z-index: 200;
+  }
+  .rank-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.12s;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .rank-suggestion:last-child { border-bottom: none; }
+  .rank-suggestion:hover, .rank-suggestion:active { background: var(--accent-soft); }
+  .rank-suggestion.in-pool { opacity: 0.6; }
+  .sugg-thumb { width: 32px; height: 44px; border-radius: 5px; object-fit: cover; flex-shrink: 0; }
+  .sugg-thumb-ph { width: 32px; height: 44px; border-radius: 5px; background: var(--glass-deep); flex-shrink: 0; }
+  .sugg-info { flex: 1; min-width: 0; }
+  .sugg-title { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sugg-year  { font-size: 11px; color: var(--muted); }
+  .sugg-badge { font-size: 10px; padding: 2px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+
+  /* Rank list */
+  .rank-list  { display: flex; flex-direction: column; gap: 8px; }
+  .rank-empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .rank-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--glass);
+    backdrop-filter: blur(12px) saturate(1.6);
+    -webkit-backdrop-filter: blur(12px) saturate(1.6);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    transition: box-shadow 0.15s, transform 0.1s;
+  }
+  .rank-item.dragging { opacity: 0.65; box-shadow: 0 12px 36px rgba(59,100,180,0.22); transform: scale(1.015); z-index: 10; }
+  .rank-poster-bg {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    opacity: 0.13; filter: blur(6px); transform: scale(1.1);
+    pointer-events: none;
+  }
+  .rank-thumb    { width: 36px; height: 50px; border-radius: 6px; object-fit: cover; flex-shrink: 0; position: relative; z-index: 1; }
+  .rank-thumb-ph { width: 36px; height: 50px; border-radius: 6px; background: var(--glass-deep); flex-shrink: 0; position: relative; z-index: 1; }
+  .rank-num  { width: 24px; text-align: center; font-size: 16px; font-weight: 800; color: var(--accent); line-height: 1; position: relative; z-index: 1; flex-shrink: 0; }
+  .rank-info { flex: 1; min-width: 0; position: relative; z-index: 1; }
+  .rank-title { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rank-year  { font-size: 11px; color: var(--muted); }
+  .rank-remove {
+    padding: 5px; border: none; background: transparent; color: var(--muted);
+    font-size: 13px; cursor: pointer; position: relative; z-index: 1;
+    border-radius: 6px; line-height: 1; transition: color 0.12s, background 0.12s; flex-shrink: 0;
+  }
+  .rank-remove:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+  .rank-handle {
+    padding: 5px 3px; color: var(--muted); font-size: 17px; cursor: grab;
+    position: relative; z-index: 1; line-height: 1; touch-action: none; flex-shrink: 0;
+  }
+  .rank-handle:active { cursor: grabbing; }
+
+  /* Compare */
+  .compare-cols     { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .compare-col-hdr  { font-size: 13px; font-weight: 700; color: var(--text); padding: 6px 10px 10px; text-align: center; }
+  .compare-col-list { display: flex; flex-direction: column; gap: 6px; }
+  .compare-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 9px;
+    background: var(--glass); border: 1px solid var(--border-soft); border-radius: 11px;
+    position: relative; overflow: hidden;
+  }
+  .compare-poster-bg {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    opacity: 0.10; filter: blur(4px); transform: scale(1.1); pointer-events: none;
+  }
+  .compare-thumb { width: 26px; height: 36px; border-radius: 4px; object-fit: cover; flex-shrink: 0; position: relative; z-index: 1; }
+  .compare-num  { font-size: 12px; font-weight: 800; color: var(--accent); width: 16px; text-align: center; flex-shrink: 0; position: relative; z-index: 1; }
+  .compare-info { flex: 1; min-width: 0; position: relative; z-index: 1; }
+  .compare-title { font-size: 11px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .compare-year  { font-size: 10px; color: var(--muted); }
+  .compare-diff  { font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 5px; flex-shrink: 0; position: relative; z-index: 1; }
+  .compare-diff.up   { color: var(--good);   background: var(--shared-soft); }
+  .compare-diff.down { color: var(--danger);  background: rgba(239,68,68,0.1); }
+  .compare-diff.same { color: var(--muted);   background: var(--glass-deep); }
+  .compare-diff.none { color: var(--muted);   background: var(--glass-deep); }
   .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
   .logo span { color: var(--accent); }
   .header-right { display: flex; align-items: center; gap: 12px; }
@@ -546,19 +697,26 @@
 <div id="app" style="display:none;">
 
   <header class="header">
-    <div class="row">
-      <div class="logo">life<span>sync</span></div>
-      <div id="header-weather" style="display:flex;align-items:center;gap:5px;">
-        <span id="weather-icon" style="font-size:20px;line-height:1;">⛅</span>
-        <span id="weather-location" style="font-size:12px;color:var(--muted);"></span>
-        <span id="weather-temp" style="font-size:13px;font-weight:600;color:var(--text);"></span>
+    <div class="header-top">
+      <div class="row">
+        <div class="logo">life<span>sync</span></div>
+        <div id="header-weather" style="display:flex;align-items:center;gap:5px;">
+          <span id="weather-icon" style="font-size:20px;line-height:1;">⛅</span>
+          <span id="weather-location" style="font-size:12px;color:var(--muted);"></span>
+          <span id="weather-temp" style="font-size:13px;font-weight:600;color:var(--text);"></span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div id="user-badge" class="user-badge" onclick="openSettings()" title="Settings" style="cursor:pointer;"></div>
       </div>
     </div>
-    <div class="header-right">
-      <div id="user-badge" class="user-badge" onclick="openSettings()" title="Settings" style="cursor:pointer;"></div>
-    </div>
+    <nav class="tab-nav">
+      <button class="tab-btn active" id="tab-home" onclick="setTab('home')">Home</button>
+      <button class="tab-btn" id="tab-rankings" onclick="setTab('rankings')">Rankings</button>
+    </nav>
   </header>
 
+  <div id="view-home">
   <div class="grid">
 
     <!-- Full Month Calendar -->
@@ -720,6 +878,42 @@
 
   </div>
   <div class="footer">lifesync · your home, in sync</div>
+  </div><!-- /view-home -->
+
+  <!-- Rankings view -->
+  <div id="view-rankings" hidden>
+    <div class="rankings-wrap">
+      <div class="rank-tabs">
+        <button class="rank-tab active" id="rtab-mine" onclick="setRankView('mine')">My Ranking</button>
+        <button class="rank-tab" id="rtab-compare" onclick="setRankView('compare')">Compare</button>
+      </div>
+
+      <!-- Mine / Partner sub-views -->
+      <div id="rview-mine">
+        <div class="rank-search-wrap">
+          <input class="input" id="rank-search" placeholder="Search for a film to add…" autocomplete="off" />
+          <div class="rank-suggestions" id="rank-suggestions" hidden></div>
+        </div>
+        <div class="rank-list" id="rank-list">
+          <div class="rank-empty">Your ranking is empty — search and add films above.</div>
+        </div>
+      </div>
+
+      <!-- Compare sub-view -->
+      <div id="rview-compare" hidden>
+        <div class="compare-cols" id="compare-cols">
+          <div class="compare-col">
+            <div class="compare-col-hdr" id="compare-hdr-p1">Matthew</div>
+            <div class="compare-col-list" id="compare-list-p1"></div>
+          </div>
+          <div class="compare-col">
+            <div class="compare-col-hdr" id="compare-hdr-p2">Megan</div>
+            <div class="compare-col-list" id="compare-list-p2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /view-rankings -->
 
   <!-- Settings modal -->
   <div class="modal-overlay" id="settings-modal" onclick="closeSettings(event)">
@@ -1042,6 +1236,15 @@ const BIN_ROTATION = [
 // Known users — maps email → colour slot (p1 or p2), stored in Firebase
 let knownUsers = {};
 
+// ── Rankings state ─────────────────────────────────────────────
+let WATCHED_POOL    = {};
+let P1_RANKING      = [];
+let P2_RANKING      = [];
+let currentTab      = 'home';
+let currentRankView = 'mine';
+let rankSearchTimer = null;
+let _filmSuggestions = {};
+
 function hideSplash() {
   const splash = document.getElementById('splash');
   splash.classList.add('fade-out');
@@ -1233,6 +1436,20 @@ function initApp() {
     renderEvents();
     renderMonthCal();
     if (currentModalDay) refreshDayModal(currentModalDay);
+  });
+
+  // Rankings
+  db.ref('watchedPool').on('value', snapshot => {
+    WATCHED_POOL = snapshot.val() || {};
+    renderRanking();
+    renderCompare();
+  });
+  db.ref('rankings').on('value', snapshot => {
+    const data = snapshot.val() || {};
+    P1_RANKING = (data.p1 || '').split(',').filter(Boolean);
+    P2_RANKING = (data.p2 || '').split(',').filter(Boolean);
+    renderRanking();
+    renderCompare();
   });
 
   document.getElementById('task-input').addEventListener('keydown', e => { if(e.key==='Enter') addTask(); });
@@ -2338,6 +2555,295 @@ function daysUntil(ds) {
 }
 function fmtDate(ds) {
   return new Date(ds).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+}
+
+// ── Tab navigation ─────────────────────────────────────────────
+function setTab(tab) {
+  currentTab = tab;
+  document.getElementById('view-home').hidden     = tab !== 'home';
+  document.getElementById('view-rankings').hidden = tab !== 'rankings';
+  document.getElementById('tab-home').classList.toggle('active',     tab === 'home');
+  document.getElementById('tab-rankings').classList.toggle('active', tab === 'rankings');
+  if (tab === 'rankings') {
+    renderRanking();
+    renderCompare();
+  }
+}
+
+// ── Rankings sub-view ──────────────────────────────────────────
+function setRankView(view) {
+  currentRankView = view;
+  document.getElementById('rview-mine').hidden    = view !== 'mine';
+  document.getElementById('rview-compare').hidden = view !== 'compare';
+  document.getElementById('rtab-mine').classList.toggle('active',    view === 'mine');
+  document.getElementById('rtab-compare').classList.toggle('active', view === 'compare');
+  if (view === 'compare') renderCompare();
+}
+
+// ── iTunes film search ─────────────────────────────────────────
+function initRankSearch() {
+  const input = document.getElementById('rank-search');
+  if (!input || input.dataset.ready) return;
+  input.dataset.ready = '1';
+  input.addEventListener('input', () => {
+    clearTimeout(rankSearchTimer);
+    const q = input.value.trim();
+    if (!q) { hideSuggestions(); return; }
+    rankSearchTimer = setTimeout(() => searchFilms(q), 350);
+  });
+  input.addEventListener('blur', () => setTimeout(hideSuggestions, 200));
+}
+
+async function searchFilms(q) {
+  try {
+    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=movie&limit=12&country=gb`;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    showSuggestions(data.results || []);
+  } catch(_) {}
+}
+
+function showSuggestions(results) {
+  const box = document.getElementById('rank-suggestions');
+  if (!results.length) { hideSuggestions(); return; }
+  _filmSuggestions = {};
+  box.innerHTML = results.map(r => {
+    const id     = String(r.trackId);
+    const title  = r.trackName || '';
+    const year   = r.releaseDate ? r.releaseDate.slice(0,4) : '';
+    const poster = (r.artworkUrl100 || '').replace('100x100bb', '300x300bb');
+    _filmSuggestions[id] = { title, year, poster };
+    return `<div class="rank-suggestion" data-id="${id}">
+      ${poster ? `<img class="sugg-thumb" src="${poster}" alt="" loading="lazy" />` : ''}
+      <span>${title}${year ? ` <span style="color:var(--muted);font-size:11px;">(${year})</span>` : ''}</span>
+    </div>`;
+  }).join('');
+  box.hidden = false;
+  if (!box.dataset.ready) {
+    box.dataset.ready = '1';
+    box.addEventListener('click', e => {
+      const item = e.target.closest('[data-id]');
+      if (!item) return;
+      const id   = item.dataset.id;
+      const film = _filmSuggestions[id];
+      if (film) addFilmToPool(id, film);
+    });
+  }
+}
+
+function hideSuggestions() {
+  const box = document.getElementById('rank-suggestions');
+  if (box) box.hidden = true;
+}
+
+// ── Pool + ranking management ──────────────────────────────────
+function addFilmToPool(id, film) {
+  hideSuggestions();
+  const input = document.getElementById('rank-search');
+  if (input) input.value = '';
+  if (WATCHED_POOL[id]) {
+    addToMyRanking(id);
+    return;
+  }
+  db.ref('watchedPool/' + id).set({
+    title:  film.title,
+    year:   film.year,
+    poster: film.poster,
+    by:     currentUser.slot,
+  }).then(() => addToMyRanking(id));
+}
+
+function addToMyRanking(id) {
+  const slot    = currentUser.slot;
+  const ranking = slot === 'p1' ? P1_RANKING : P2_RANKING;
+  if (ranking.includes(id)) return;
+  const next = [...ranking, id];
+  db.ref('rankings/' + slot).set(next.join(','));
+}
+
+function removeFromMyRanking(id) {
+  const slot    = currentUser.slot;
+  const ranking = slot === 'p1' ? P1_RANKING : P2_RANKING;
+  const next    = ranking.filter(x => x !== id);
+  db.ref('rankings/' + slot).set(next.join(','));
+}
+
+function saveMyRanking(arr) {
+  db.ref('rankings/' + currentUser.slot).set(arr.join(','));
+}
+
+// ── Render my ranking ──────────────────────────────────────────
+function renderRanking() {
+  const list = document.getElementById('rank-list');
+  if (!list) return;
+  initRankSearch();
+
+  const slot    = currentUser.slot;
+  const ranking = slot === 'p1' ? P1_RANKING : P2_RANKING;
+
+  if (!ranking.length) {
+    list.innerHTML = '<div class="rank-empty">Your ranking is empty — search and add films above.</div>';
+    return;
+  }
+
+  list.innerHTML = ranking.map((id, i) => {
+    const film   = WATCHED_POOL[id] || {};
+    const title  = film.title || id;
+    const year   = film.year  || '';
+    const poster = film.poster || '';
+    return `<div class="rank-item" data-id="${id}" data-idx="${i}">
+      ${poster ? `<div class="rank-poster-bg" style="background-image:url('${poster}')"></div>` : ''}
+      <span class="rank-num">${i + 1}</span>
+      ${poster ? `<img class="rank-thumb" src="${poster}" alt="" loading="lazy" />` : ''}
+      <div class="rank-info">
+        <div class="rank-title">${title}</div>
+        ${year ? `<div class="rank-year">${year}</div>` : ''}
+      </div>
+      <button class="rank-remove" onclick="removeFromMyRanking('${id}')" title="Remove">✕</button>
+      <span class="rank-handle" title="Drag to reorder">⠿</span>
+    </div>`;
+  }).join('');
+
+  attachDragListeners(list, ranking);
+}
+
+// ── Drag-to-reorder ────────────────────────────────────────────
+function attachDragListeners(list, ranking) {
+  if (list.dataset.dragReady) return;
+  list.dataset.dragReady = '1';
+
+  let dragIdx   = null;
+  let workArr   = null;
+  let dragEl    = null;
+  let startY    = 0;
+  let offsetY   = 0;
+  let itemH     = 0;
+
+  function onDown(e) {
+    const handle = e.target.closest('.rank-handle');
+    if (!handle) return;
+    const item = handle.closest('.rank-item');
+    if (!item) return;
+    e.preventDefault();
+
+    dragIdx = parseInt(item.dataset.idx, 10);
+    workArr = [...(currentUser.slot === 'p1' ? P1_RANKING : P2_RANKING)];
+    dragEl  = item;
+    itemH   = item.offsetHeight + 8;
+    startY  = (e.touches ? e.touches[0].clientY : e.clientY);
+    offsetY = 0;
+
+    dragEl.classList.add('dragging');
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup',   onUp);
+    document.addEventListener('touchend',  onUp);
+  }
+
+  function onMove(e) {
+    if (dragIdx === null) return;
+    e.preventDefault();
+    const y      = (e.touches ? e.touches[0].clientY : e.clientY);
+    offsetY      = y - startY;
+    const newIdx = Math.max(0, Math.min(workArr.length - 1, dragIdx + Math.round(offsetY / itemH)));
+    if (newIdx !== dragIdx) {
+      const moved = workArr.splice(dragIdx, 1)[0];
+      workArr.splice(newIdx, 0, moved);
+      dragIdx = newIdx;
+      startY  = y;
+      offsetY = 0;
+      rerenderDrag(list, workArr, dragIdx);
+    }
+  }
+
+  function onUp() {
+    if (dragIdx === null) return;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+    document.removeEventListener('touchend',  onUp);
+    if (dragEl) dragEl.classList.remove('dragging');
+    dragEl  = null;
+    saveMyRanking(workArr);
+    dragIdx = null;
+    workArr = null;
+  }
+
+  list.addEventListener('mousedown', onDown);
+  list.addEventListener('touchstart', onDown, { passive: false });
+}
+
+function rerenderDrag(list, arr, activeIdx) {
+  list.innerHTML = arr.map((id, i) => {
+    const film   = WATCHED_POOL[id] || {};
+    const title  = film.title || id;
+    const year   = film.year  || '';
+    const poster = film.poster || '';
+    return `<div class="rank-item${i === activeIdx ? ' dragging' : ''}" data-id="${id}" data-idx="${i}">
+      ${poster ? `<div class="rank-poster-bg" style="background-image:url('${poster}')"></div>` : ''}
+      <span class="rank-num">${i + 1}</span>
+      ${poster ? `<img class="rank-thumb" src="${poster}" alt="" loading="lazy" />` : ''}
+      <div class="rank-info">
+        <div class="rank-title">${title}</div>
+        ${year ? `<div class="rank-year">${year}</div>` : ''}
+      </div>
+      <button class="rank-remove" onclick="removeFromMyRanking('${id}')" title="Remove">✕</button>
+      <span class="rank-handle" title="Drag to reorder">⠿</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Render compare view ────────────────────────────────────────
+function renderCompare() {
+  const p1List = document.getElementById('compare-list-p1');
+  const p2List = document.getElementById('compare-list-p2');
+  const hdrP1  = document.getElementById('compare-hdr-p1');
+  const hdrP2  = document.getElementById('compare-hdr-p2');
+  if (!p1List || !p2List) return;
+
+  // Update headers with real names if known
+  const users = Object.values(knownUsers);
+  const p1u   = users.find(u => u.slot === 'p1');
+  const p2u   = users.find(u => u.slot === 'p2');
+  if (hdrP1 && p1u) hdrP1.textContent = p1u.name.split(' ')[0];
+  if (hdrP2 && p2u) hdrP2.textContent = p2u.name.split(' ')[0];
+
+  function buildCol(ranking, otherRanking, el) {
+    if (!ranking.length) {
+      el.innerHTML = '<div class="rank-empty" style="font-size:13px;">No ranking yet.</div>';
+      return;
+    }
+    el.innerHTML = ranking.map((id, i) => {
+      const film   = WATCHED_POOL[id] || {};
+      const title  = film.title || id;
+      const year   = film.year  || '';
+      const poster = film.poster || '';
+      const otherI = otherRanking.indexOf(id);
+      let diffHtml = '';
+      if (otherI === -1) {
+        diffHtml = '<span class="compare-diff none">–</span>';
+      } else {
+        const delta = otherI - i;
+        if (delta === 0)      diffHtml = '<span class="compare-diff same">–</span>';
+        else if (delta > 0)   diffHtml = `<span class="compare-diff up">▲${delta}</span>`;
+        else                  diffHtml = `<span class="compare-diff down">▼${Math.abs(delta)}</span>`;
+      }
+      return `<div class="compare-item">
+        ${poster ? `<div class="compare-poster-bg" style="background-image:url('${poster}')"></div>` : ''}
+        ${poster ? `<img class="compare-thumb" src="${poster}" alt="" loading="lazy" />` : ''}
+        <span class="compare-num">${i + 1}</span>
+        <div class="compare-info">
+          <div class="compare-title">${title}</div>
+          ${year ? `<div style="font-size:11px;color:var(--muted);">${year}</div>` : ''}
+        </div>
+        ${diffHtml}
+      </div>`;
+    }).join('');
+  }
+
+  buildCol(P1_RANKING, P2_RANKING, p1List);
+  buildCol(P2_RANKING, P1_RANKING, p2List);
 }
 </script>
 </body>
