@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260902-120000" />
+<meta name="app-version" content="20260902-130000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -1306,8 +1306,21 @@ async function fetchUserInfo(accessToken) {
 
 function onSignedIn(user, restoredSession) {
   // Look up or register user slot in Firebase
+  // Timeout fallback: if Firebase doesn't respond in 5 s, clear the bad session and show sign-in
   const usersRef = db.ref('users');
+  let fbDone = false;
+  const fbTimeout = setTimeout(() => {
+    if (fbDone) return;
+    fbDone = true;
+    localStorage.removeItem('lifesync-session');
+    hideSplash();
+    document.getElementById('signin-screen').style.display = 'flex';
+    showSigninError('Could not reach the server. Please check your connection and try again.');
+  }, 5000);
   usersRef.once('value', snapshot => {
+    if (fbDone) return;
+    fbDone = true;
+    clearTimeout(fbTimeout);
     const users = snapshot.val() || {};
     knownUsers = users;
 
