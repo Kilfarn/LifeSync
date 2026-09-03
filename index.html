@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260902-130000" />
+<meta name="app-version" content="20260902-140000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -13,8 +13,6 @@
 <link rel="apple-touch-icon" href="icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<!-- Google Identity Services -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -114,6 +112,19 @@
   .signin-features { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; }
   .signin-feature { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
   .signin-feature span:first-child { font-size: 16px; }
+  .profile-tiles { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 14px 0 8px; }
+  .profile-tile {
+    display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;
+    padding: 14px 18px; border-radius: 16px;
+    background: var(--glass-deep); border: 1.5px solid var(--border-soft);
+    transition: all 0.15s; min-width: 90px;
+  }
+  .profile-tile:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .profile-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: #fff; }
+  .profile-tile-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .si-error { font-size: 12px; color: var(--danger); min-height: 18px; margin-top: 2px; }
+  .si-link { background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; padding: 10px 0 2px; text-align: center; width: 100%; display: block; }
+  .si-link:hover { color: var(--accent); }
   .google-btn {
     display: flex; align-items: center; gap: 10px;
     background: #fff; color: #3c4043;
@@ -673,23 +684,44 @@
 <div id="signin-screen" class="signin-screen" style="display:none;">
   <div class="signin-logo">life<span>sync</span></div>
   <div class="signin-card">
-    <div class="signin-title">Welcome home 🏠</div>
-    <div class="signin-sub">Sign in with Google to access your shared household dashboard.</div>
-    <div class="signin-features">
-      <div class="signin-feature"><span>📅</span><span>Your Google Calendar, synced automatically</span></div>
-      <div class="signin-feature"><span>👫</span><span>Shared tasks and notes with your partner</span></div>
-      <div class="signin-feature"><span>🗑️</span><span>Bin day reminders, fitness tracking & more</span></div>
+
+    <!-- Profile list -->
+    <div id="si-profiles" style="display:none;flex-direction:column;align-items:center;gap:4px;width:100%;">
+      <div class="signin-title">Welcome home 🏠</div>
+      <div class="signin-sub">Who's logging in?</div>
+      <div class="profile-tiles" id="profile-tiles"></div>
+      <button class="si-link" onclick="showPanel('si-create')">+ Add new profile</button>
     </div>
-    <button class="google-btn" onclick="signIn()">
-      <svg class="google-logo" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-        <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
-        <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
-        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.962L3.964 6.294C4.672 4.169 6.656 3.58 9 3.58z" fill="#EA4335"/>
-      </svg>
-      Sign in with Google
-    </button>
-    <div id="signin-error" style="font-size:12px;color:var(--danger);display:none;"></div>
+
+    <!-- PIN entry -->
+    <div id="si-pin" style="display:none;flex-direction:column;align-items:center;gap:10px;width:100%;">
+      <div class="signin-title" id="si-pin-name"></div>
+      <div class="signin-sub">Enter your PIN to continue.</div>
+      <input class="input" type="password" inputmode="numeric" id="si-pin-input"
+             placeholder="4-digit PIN" maxlength="4" autocomplete="off"
+             style="text-align:center;font-size:20px;letter-spacing:6px;"
+             onkeydown="if(event.key==='Enter')doLogin()" />
+      <button class="google-btn" style="margin-top:0;" onclick="doLogin()">Log In</button>
+      <div class="si-error" id="si-pin-error"></div>
+      <button class="si-link" onclick="showProfiles()">← Back</button>
+    </div>
+
+    <!-- Create profile -->
+    <div id="si-create" style="display:none;flex-direction:column;align-items:center;gap:10px;width:100%;">
+      <div class="signin-title" id="si-create-title">Create profile</div>
+      <div class="signin-sub">Choose a name and a 4-digit PIN.</div>
+      <input class="input" id="si-new-name" placeholder="Your name" maxlength="32"
+             onkeydown="if(event.key==='Enter')document.getElementById('si-new-pin').focus()" />
+      <input class="input" type="password" inputmode="numeric" id="si-new-pin"
+             placeholder="4-digit PIN" maxlength="4" autocomplete="new-password"
+             style="text-align:center;font-size:20px;letter-spacing:6px;"
+             onkeydown="if(event.key==='Enter')doCreateProfile()" />
+      <button class="google-btn" style="margin-top:0;" onclick="doCreateProfile()">Create Profile</button>
+      <div class="si-error" id="si-create-error"></div>
+      <button class="si-link" id="si-create-back" onclick="showProfiles()" style="display:none;">← Back</button>
+    </div>
+
+    <div id="signin-error" style="font-size:12px;color:var(--danger);display:none;margin-top:6px;"></div>
   </div>
 </div>
 
@@ -1251,146 +1283,109 @@ function hideSplash() {
   setTimeout(() => { splash.style.display = 'none'; }, 360);
 }
 
-function signIn() {
-  // Single OAuth redirect requesting profile + calendar in one go
-  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' +
-    'client_id=' + CLIENT_ID +
-    '&redirect_uri=' + encodeURIComponent(location.origin + location.pathname) +
-    '&response_type=token' +
-    '&scope=' + encodeURIComponent('openid email profile ' + SCOPES) +
-    '&prompt=select_account';
-  window.location.href = url;
+// ── Local profile auth ─────────────────────────────────────────
+function getProfiles() {
+  try { return JSON.parse(localStorage.getItem('lifesync-profiles') || '[]'); }
+  catch(_) { return []; }
 }
+function saveProfiles(p) { localStorage.setItem('lifesync-profiles', JSON.stringify(p)); }
 
-// On page load — check if we're returning from an OAuth redirect
-// OR restore a previously saved session
-(function handleRedirect() {
-  // 1. Check for OAuth redirect first
-  const hash = window.location.hash;
-  if (hash.includes('access_token')) {
-    const params = new URLSearchParams(hash.slice(1));
-    const accessToken = params.get('access_token');
-    if (accessToken) {
-      history.replaceState(null, '', window.location.pathname);
-      fetchUserInfo(accessToken);
-      return;
-    }
-  }
+let _selectedProfileId = null;
 
-  // 2. Restore saved session if available
-  const saved = localStorage.getItem('lifesync-session');
-  if (saved) {
-    const user = JSON.parse(saved);
-    onSignedIn(user, true);
-  } else {
-    // No session — reveal sign-in screen
-    hideSplash();
-    document.getElementById('signin-screen').style.display = 'flex';
-  }
-})();
-
-async function fetchUserInfo(accessToken) {
-  try {
-    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: 'Bearer ' + accessToken }
-    });
-    const info = await r.json();
-    if (!info.email) throw new Error('No email returned');
-    onSignedIn({ name: info.name, email: info.email, picture: info.picture, accessToken });
-  } catch(e) {
-    hideSplash();
-    document.getElementById('signin-screen').style.display = 'flex';
-    showSigninError('Sign-in failed: ' + e.message + '. Please try again.');
-  }
-}
-
-function onSignedIn(user, restoredSession) {
-  // Look up or register user slot in Firebase
-  // Timeout fallback: if Firebase doesn't respond in 5 s, clear the bad session and show sign-in
-  const usersRef = db.ref('users');
-  let fbDone = false;
-  const fbTimeout = setTimeout(() => {
-    if (fbDone) return;
-    fbDone = true;
-    localStorage.removeItem('lifesync-session');
-    hideSplash();
-    document.getElementById('signin-screen').style.display = 'flex';
-    showSigninError('Could not reach the server. Please check your connection and try again.');
-  }, 5000);
-  usersRef.once('value', snapshot => {
-    if (fbDone) return;
-    fbDone = true;
-    clearTimeout(fbTimeout);
-    const users = snapshot.val() || {};
-    knownUsers = users;
-
-    if (!users[btoa(user.email)]) {
-      // New user — assign slot based on how many users exist
-      const slot = Object.keys(users).length === 0 ? 'p1' : 'p2';
-      users[btoa(user.email)] = { slot, name: user.name, email: user.email, picture: user.picture || '' };
-      db.ref('users/' + btoa(user.email)).set(users[btoa(user.email)]);
-      knownUsers = users;
-    }
-
-    user.slot = users[btoa(user.email)].slot;
-    currentUser = user;
-
-    // Save session locally (no access token — expires anyway)
-    localStorage.setItem('lifesync-session', JSON.stringify({
-      name: user.name, email: user.email, picture: user.picture, slot: user.slot
-    }));
-
-    document.getElementById('signin-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    hideSplash();
-
-    initApp();
-
-    if (user.accessToken) {
-      loadCalendarEvents();
-    } else if (restoredSession) {
-      refreshCalendarToken();
-    }
+function showPanel(id) {
+  ['si-profiles','si-pin','si-create'].forEach(p => {
+    document.getElementById(p).style.display = p === id ? 'flex' : 'none';
   });
 }
 
-function refreshCalendarToken() {
-  // Use prompt=none so it's silent (no popup) if the user is still logged into Google
-  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' +
-    'client_id=' + CLIENT_ID +
-    '&redirect_uri=' + encodeURIComponent(location.origin + location.pathname) +
-    '&response_type=token' +
-    '&scope=' + encodeURIComponent('openid email profile ' + SCOPES) +
-    '&prompt=none' +
-    '&login_hint=' + encodeURIComponent(currentUser.email);
+function showProfiles() {
+  const profiles = getProfiles();
+  if (!profiles.length) {
+    document.getElementById('si-create-title').textContent = 'Create your profile';
+    document.getElementById('si-create-back').style.display = 'none';
+    showPanel('si-create');
+    setTimeout(() => document.getElementById('si-new-name').focus(), 50);
+    return;
+  }
+  document.getElementById('profile-tiles').innerHTML = profiles.map(p => `
+    <div class="profile-tile" onclick="selectProfile('${p.id}')">
+      <div class="profile-avatar" style="background:var(--${p.slot})">${p.name.charAt(0).toUpperCase()}</div>
+      <div class="profile-tile-name">${p.name}</div>
+    </div>
+  `).join('');
+  showPanel('si-profiles');
+}
 
-  // Use a hidden iframe for the silent refresh
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  iframe.src = url;
-  iframe.onload = () => {
-    try {
-      const hash = iframe.contentWindow.location.hash;
-      const params = new URLSearchParams(hash.slice(1));
-      const token = params.get('access_token');
-      if (token) {
-        currentUser.accessToken = token;
-        loadCalendarEvents();
-      }
-    } catch(e) {
-      // Cross-origin — token refresh will happen on next manual sign-in
-    }
-    document.body.removeChild(iframe);
-  };
-  document.body.appendChild(iframe);
+function selectProfile(id) {
+  _selectedProfileId = id;
+  const p = getProfiles().find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('si-pin-name').textContent = p.name;
+  document.getElementById('si-pin-input').value = '';
+  document.getElementById('si-pin-error').textContent = '';
+  showPanel('si-pin');
+  setTimeout(() => document.getElementById('si-pin-input').focus(), 50);
+}
+
+function doLogin() {
+  const pin = document.getElementById('si-pin-input').value;
+  const p   = getProfiles().find(x => x.id === _selectedProfileId);
+  if (!p || p.pin !== pin) {
+    document.getElementById('si-pin-error').textContent = 'Incorrect PIN — try again.';
+    document.getElementById('si-pin-input').value = '';
+    document.getElementById('si-pin-input').focus();
+    return;
+  }
+  startSession(p);
+}
+
+function doCreateProfile() {
+  const name  = document.getElementById('si-new-name').value.trim();
+  const pin   = document.getElementById('si-new-pin').value;
+  const errEl = document.getElementById('si-create-error');
+  errEl.textContent = '';
+  if (!name) { errEl.textContent = 'Please enter a name.'; return; }
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits.'; return; }
+  const profiles = getProfiles();
+  if (profiles.length >= 2) { errEl.textContent = 'Maximum 2 profiles — sign in with an existing one.'; return; }
+  const slot    = profiles.length === 0 ? 'p1' : 'p2';
+  const id      = Date.now().toString(36);
+  const profile = { id, name, pin, slot };
+  saveProfiles([...profiles, profile]);
+  document.getElementById('si-new-name').value = '';
+  document.getElementById('si-new-pin').value  = '';
+  startSession(profile);
+}
+
+function startSession(profile) {
+  const user = { name: profile.name, slot: profile.slot, id: profile.id };
+  localStorage.setItem('lifesync-session', JSON.stringify(user));
+  currentUser = user;
+  _refreshKnownUsers();
+  document.getElementById('signin-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  hideSplash();
+  initApp();
+}
+
+function _refreshKnownUsers() {
+  knownUsers = {};
+  getProfiles().forEach(p => { knownUsers[p.id] = { slot: p.slot, name: p.name }; });
+}
+
+function showSignin() {
+  hideSplash();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('signin-screen').style.display = 'flex';
+  showProfiles();
 }
 
 function signOut() {
   currentUser = null;
   EVENTS = [];
   localStorage.removeItem('lifesync-session');
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('signin-screen').style.display = 'flex';
+  closeSettings();
+  showSignin();
 }
 
 function showSigninError(msg) {
@@ -1398,6 +1393,29 @@ function showSigninError(msg) {
   el.textContent = msg;
   el.style.display = 'block';
 }
+
+// On page load — restore session or show sign-in
+(function handleRedirect() {
+  const saved = localStorage.getItem('lifesync-session');
+  if (saved) {
+    try {
+      const user = JSON.parse(saved);
+      const profiles = getProfiles();
+      const profile  = profiles.find(p => p.id === user.id);
+      if (profile) {
+        currentUser = user;
+        _refreshKnownUsers();
+        document.getElementById('signin-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        hideSplash();
+        initApp();
+        return;
+      }
+    } catch(_) {}
+    localStorage.removeItem('lifesync-session');
+  }
+  showSignin();
+})();
 
 // ── INIT APP ──────────────────────────────────────────────────────────────────
 function initApp() {
@@ -1410,11 +1428,7 @@ function initApp() {
     ? `<img class="user-avatar" src="${currentUser.picture}" referrerpolicy="no-referrer" /> ${currentUser.name.split(' ')[0]}`
     : `<div class="user-avatar-placeholder" style="background:${color}">${initial}</div> ${currentUser.name.split(' ')[0]}`;
 
-  // Listen for all users to populate partner info dynamically
-  db.ref('users').on('value', snapshot => {
-    knownUsers = snapshot.val() || {};
-    updatePartnerDisplay(knownUsers);
-  });
+  updatePartnerDisplay();
 
   // ── Firebase real-time listeners ──────────────────────────
   // Tasks
@@ -1489,14 +1503,7 @@ function initApp() {
   if (Notification.permission === 'granted') scheduleBinNotifications();
   updateNotifBtn();
 
-  // Auto-refresh calendar every 5 minutes, weather every 15 minutes
-  setInterval(() => {
-    if (currentUser?.accessToken) {
-      loadCalendarEvents();
-    } else {
-      refreshCalendarToken();
-    }
-  }, 5 * 60 * 1000);
+  // Auto-refresh weather every 15 minutes
   setInterval(loadWeather, 15 * 60 * 1000);
   // Re-fire bin notification every hour while not marked done
   setInterval(() => { if (Notification.permission === 'granted') scheduleBinNotifications(); }, 60 * 60 * 1000);
@@ -1504,8 +1511,6 @@ function initApp() {
   // Refresh when app comes back into view (tab switch, PWA foreground)
   function refreshOnResume() {
     if (!currentUser) return;
-    if (currentUser.accessToken) loadCalendarEvents();
-    else refreshCalendarToken();
     loadWeather();
     // Delay so any postMessage from a notification action arrives first
     setTimeout(() => { if (Notification.permission === 'granted') scheduleBinNotifications(); }, 600);
@@ -1523,14 +1528,14 @@ function initApp() {
   window.addEventListener('pageshow', refreshOnResume);
 }
 
-function updatePartnerDisplay(users) {
-  const entries     = Object.values(users);
-  const me          = entries.find(u => u.email === currentUser.email);
-  const partner     = entries.find(u => u.email !== currentUser.email);
+function updatePartnerDisplay() {
+  const profiles    = getProfiles();
+  const mySlot      = currentUser.slot;
+  const partnerSlot = mySlot === 'p1' ? 'p2' : 'p1';
+  const me          = profiles.find(p => p.slot === mySlot);
+  const partner     = profiles.find(p => p.slot === partnerSlot);
   const myName      = me?.name?.split(' ')[0]      || 'You';
   const partnerName = partner?.name?.split(' ')[0] || 'Partner';
-  const mySlot      = me?.slot      || currentUser.slot;
-  const partnerSlot = partner?.slot || (mySlot === 'p1' ? 'p2' : 'p1');
 
   document.getElementById(`fitness-${mySlot}-title`).innerHTML =
     `🏃 Fitness · <span style="color:var(--${mySlot});">${myName}</span>`;
