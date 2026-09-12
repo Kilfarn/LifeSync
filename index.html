@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260902-140000" />
+<meta name="app-version" content="20260912-120000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -2603,13 +2603,28 @@ function initRankSearch() {
   const input = document.getElementById('rank-search');
   if (!input || input.dataset.ready) return;
   input.dataset.ready = '1';
+
+  // Use pointerdown (fires before blur) so selecting a suggestion never races
+  const box = document.getElementById('rank-suggestions');
+  if (box && !box.dataset.ready) {
+    box.dataset.ready = '1';
+    box.addEventListener('pointerdown', e => {
+      e.preventDefault(); // keep focus on input, no blur fires
+      const item = e.target.closest('[data-id]');
+      if (!item) return;
+      const id   = item.dataset.id;
+      const film = _filmSuggestions[id];
+      if (film) addFilmToPool(id, film);
+    });
+  }
+
   input.addEventListener('input', () => {
     clearTimeout(rankSearchTimer);
     const q = input.value.trim();
     if (!q) { hideSuggestions(); return; }
-    rankSearchTimer = setTimeout(() => searchFilms(q), 350);
+    rankSearchTimer = setTimeout(() => searchFilms(q), 250);
   });
-  input.addEventListener('blur', () => setTimeout(hideSuggestions, 200));
+  input.addEventListener('blur', () => setTimeout(hideSuggestions, 300));
 }
 
 async function searchFilms(q) {
@@ -2619,12 +2634,18 @@ async function searchFilms(q) {
     if (!res.ok) return;
     const data = await res.json();
     showSuggestions(data.results || []);
-  } catch(_) {}
+  } catch(err) {
+    console.warn('Film search error:', err);
+  }
 }
 
 function showSuggestions(results) {
   const box = document.getElementById('rank-suggestions');
-  if (!results.length) { hideSuggestions(); return; }
+  if (!results.length) {
+    box.innerHTML = '<div style="padding:10px 14px;color:var(--muted);font-size:13px;">No films found</div>';
+    box.hidden = false;
+    return;
+  }
   _filmSuggestions = {};
   box.innerHTML = results.map(r => {
     const id     = String(r.trackId);
@@ -2633,21 +2654,11 @@ function showSuggestions(results) {
     const poster = (r.artworkUrl100 || '').replace('100x100bb', '300x300bb');
     _filmSuggestions[id] = { title, year, poster };
     return `<div class="rank-suggestion" data-id="${id}">
-      ${poster ? `<img class="sugg-thumb" src="${poster}" alt="" loading="lazy" />` : ''}
+      ${poster ? `<img class="sugg-thumb" src="${poster}" alt="" loading="lazy" />` : '<div class="sugg-thumb-ph"></div>'}
       <span>${title}${year ? ` <span style="color:var(--muted);font-size:11px;">(${year})</span>` : ''}</span>
     </div>`;
   }).join('');
   box.hidden = false;
-  if (!box.dataset.ready) {
-    box.dataset.ready = '1';
-    box.addEventListener('click', e => {
-      const item = e.target.closest('[data-id]');
-      if (!item) return;
-      const id   = item.dataset.id;
-      const film = _filmSuggestions[id];
-      if (film) addFilmToPool(id, film);
-    });
-  }
 }
 
 function hideSuggestions() {
