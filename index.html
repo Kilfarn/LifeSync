@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20260912-120000" />
+<meta name="app-version" content="20260912-121500" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -2628,8 +2628,9 @@ function initRankSearch() {
 }
 
 async function searchFilms(q) {
+  if (q.length < 2) return;
   try {
-    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=movie&limit=12&country=gb`;
+    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=movie&limit=15&country=us`;
     const res = await fetch(url);
     if (!res.ok) return;
     const data = await res.json();
