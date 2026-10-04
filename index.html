@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="app-version" content="20261004-100000" />
+<meta name="app-version" content="20261004-110000" />
 <title>LifeSync — Home Dashboard</title>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#3B82F6" />
@@ -2834,7 +2834,14 @@ function initRankSearch() {
       e.preventDefault();
       const item = e.target.closest('[data-id]');
       if (!item) return;
-      const id   = item.dataset.id;
+      const id = item.dataset.id;
+      if (id === '__custom__') {
+        const title = item.dataset.title || '';
+        if (!title) return;
+        const customId = 'cx_' + Date.now();
+        addFilmToPool(customId, { title, year: item.dataset.year || '', poster: '' });
+        return;
+      }
       const film = _filmSuggestions[id];
       if (film) addFilmToPool(id, film);
     });
@@ -2855,16 +2862,11 @@ function searchFilms(q) {
     if (seen.has(id)) return false;
     seen.add(id);
     return words.every(w => title.toLowerCase().includes(w));
-  }).slice(0, 15);
+  }).slice(0, 12);
 
   const box = document.getElementById('rank-suggestions');
-  if (!matches.length) {
-    box.innerHTML = '<div style="padding:10px 14px;color:var(--muted);font-size:13px;">No films found in top 250</div>';
-    box.hidden = false;
-    return;
-  }
   _filmSuggestions = {};
-  box.innerHTML = matches.map(([id, title, year]) => {
+  const rows = matches.map(([id, title, year]) => {
     _filmSuggestions[id] = { title, year, poster: '' };
     const inPool = !!WATCHED_POOL[id];
     return `<div class="rank-suggestion${inPool ? ' in-pool' : ''}" data-id="${id}">
@@ -2872,7 +2874,13 @@ function searchFilms(q) {
       <span>${title} <span style="color:var(--muted);font-size:11px;">(${year})</span></span>
       ${inPool ? '<span style="margin-left:auto;font-size:11px;color:var(--muted);">in pool</span>' : ''}
     </div>`;
-  }).join('');
+  });
+  const escaped = q.replace(/"/g, '&quot;');
+  rows.push(`<div class="rank-suggestion" data-id="__custom__" data-title="${escaped}" style="border-top:1px solid var(--border-soft);">
+    <div class="sugg-thumb-ph" style="display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;">+</div>
+    <span>Add <em>"${escaped}"</em> as custom film</span>
+  </div>`);
+  box.innerHTML = rows.join('');
   box.hidden = false;
 }
 
@@ -2886,16 +2894,12 @@ function addFilmToPool(id, film) {
   hideSuggestions();
   const input = document.getElementById('rank-search');
   if (input) input.value = '';
-  if (WATCHED_POOL[id]) {
-    addToMyRanking(id);
-    return;
+  // Optimistic: update local state immediately, sync to Firebase in background
+  if (!WATCHED_POOL[id]) {
+    WATCHED_POOL[id] = { title: film.title, year: film.year, poster: film.poster, by: currentUser.slot };
+    db.ref('watchedPool/' + id).set(WATCHED_POOL[id]);
   }
-  db.ref('watchedPool/' + id).set({
-    title:  film.title,
-    year:   film.year,
-    poster: film.poster,
-    by:     currentUser.slot,
-  }).then(() => addToMyRanking(id));
+  addToMyRanking(id);
 }
 
 function addToMyRanking(id) {
@@ -2903,18 +2907,24 @@ function addToMyRanking(id) {
   const ranking = slot === 'p1' ? P1_RANKING : P2_RANKING;
   if (ranking.includes(id)) return;
   const next = [...ranking, id];
+  if (slot === 'p1') P1_RANKING = next; else P2_RANKING = next;
   db.ref('rankings/' + slot).set(next.join(','));
+  renderRanking();
 }
 
 function removeFromMyRanking(id) {
   const slot    = currentUser.slot;
   const ranking = slot === 'p1' ? P1_RANKING : P2_RANKING;
   const next    = ranking.filter(x => x !== id);
+  if (slot === 'p1') P1_RANKING = next; else P2_RANKING = next;
   db.ref('rankings/' + slot).set(next.join(','));
+  renderRanking();
 }
 
 function saveMyRanking(arr) {
-  db.ref('rankings/' + currentUser.slot).set(arr.join(','));
+  const slot = currentUser.slot;
+  if (slot === 'p1') P1_RANKING = arr; else P2_RANKING = arr;
+  db.ref('rankings/' + slot).set(arr.join(','));
 }
 
 // ── Render my ranking ──────────────────────────────────────────
